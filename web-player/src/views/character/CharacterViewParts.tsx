@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { C, withAlpha } from "@/lib/theme";
 import { Panel as SharedPanel, ghostButtonStyle, rarityColor } from "@beholden/shared/ui";
 
@@ -38,9 +39,9 @@ export function Tooltip({ text, children, multiline }: { text: string; children:
   );
 }
 
-export function Wrap({ children, wide, minWidth, inCombat = false, style, backgroundImage, backgroundSize, backgroundColor = C.bg, textColor = C.text }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string; inCombat?: boolean; style?: React.CSSProperties; backgroundImage?: string; backgroundSize?: string; backgroundColor?: string; textColor?: string }) {
+export function Wrap({ children, wide, minWidth, inCombat = false, style, backgroundImage, backgroundSize, backgroundColor = C.bg, textColor = C.text, className, scrollRef }: { children: React.ReactNode; wide?: boolean; minWidth?: number | string; inCombat?: boolean; style?: React.CSSProperties; backgroundImage?: string; backgroundSize?: string; backgroundColor?: string; textColor?: string; className?: string; scrollRef?: React.Ref<HTMLDivElement> }) {
   return (
-    <div style={{
+    <div ref={scrollRef} className={className} style={{
       height: "100%",
       boxSizing: "border-box",
       overflowY: "auto",
@@ -97,6 +98,7 @@ export function CollapsiblePanel({
   embedded?: boolean;
 }) {
   const panelColor = `var(--character-panel-accent, ${color})`;
+  const phone = useIsNarrow("(max-width: 760px)");
   const [open, setOpen] = useState(() => {
     try {
       const v = localStorage.getItem(`panel:${storageKey}`);
@@ -123,6 +125,7 @@ export function CollapsiblePanel({
         style={{
           display: "flex", alignItems: "center", gap: 8,
           cursor: "pointer", userSelect: "none",
+          ...(phone ? { flexWrap: "wrap", minHeight: 44, minWidth: 0 } : {}),
           marginBottom: open ? 10 : 0,
         }}
       >
@@ -139,7 +142,7 @@ export function CollapsiblePanel({
         )}
         <div style={{ flex: 1, height: 1, background: `color-mix(in srgb, ${panelColor} 19%, transparent)` }} />
         {actions && (
-          <div className="character-panel__actions" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>{actions}</div>
+          <div className="character-panel__actions" style={{ flexShrink: 0, ...(phone ? { maxWidth: "100%", minWidth: 0 } : {}) }} onClick={(e) => e.stopPropagation()}>{actions}</div>
         )}
         <span style={{
           color: panelColor, fontSize: "var(--fs-tiny)", lineHeight: 1,

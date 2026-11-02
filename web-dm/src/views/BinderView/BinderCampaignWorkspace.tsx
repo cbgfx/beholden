@@ -1,4 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useRichTextDraft } from "./useRichTextDraft";
 import { useEffect, useState } from "react";
 import { IconCampaign, IconPencil } from "@/icons";
@@ -58,6 +59,7 @@ export function BinderCampaignWorkspace(props: { binderId: string; campaign: Cam
 }
 
 function CampaignWorkspaceContent(props: { binderId: string; campaign: Campaign; binderCurrentDate: string | null; accent: string }) {
+  const compact = useIsNarrow("(max-width: 1100px)");
   const translateUi = useUiTranslation("dmUi");
   const [story, setStory] = useState(props.campaign.campaignStory ?? null);
   const [notes, setNotes] = useState(props.campaign.campaignNotes ?? null);
@@ -76,7 +78,7 @@ function CampaignWorkspaceContent(props: { binderId: string; campaign: Campaign;
   const mentions = records.map((record) => ({ id: record.id, label: record.name, href: record.route, type: record.type }));
 
   return (
-    <article style={{ maxWidth: 1180, padding: "6px 4px 60px" }}>
+    <article style={{ maxWidth: 1180, padding: "6px 4px 60px", ...(compact ? { minWidth: 0, overflowWrap: "anywhere" } : {}) }}>
       <div style={{ display: "flex", gap: 13, alignItems: "center", marginBottom: 28 }}>
         <span style={{ display: "grid", color: props.accent }}><IconCampaign size={38} /></span>
         <div>

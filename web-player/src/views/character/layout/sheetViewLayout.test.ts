@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { PANEL_IDS } from "@/views/character/layout/panelRegistry";
-import { normalizeSheetView, normalizeSheetViews, resolveActiveSheetView } from "@/views/character/layout/sheetViewLayout";
+import { cloneSheetView, normalizeSheetView, normalizeSheetViews, resolveActiveSheetView } from "@/views/character/layout/sheetViewLayout";
 
 describe("sheet view layout normalization", () => {
+  it("preserves and clones column labels/icons while dropping invalid and removed-column metadata", () => {
+    const view = normalizeSheetView({ id: "custom", name: "Custom", columns: 2, layout: [[], []], columnHeaders: [{ name: "  Magic  ", icon: "spells" }, { name: 123, icon: "unknown" }, { name: "Removed" }] } as never);
+    expect(view.columnHeaders).toEqual([{ name: "Magic", icon: "spells" }, {}]);
+    expect(normalizeSheetView({ ...view, columnHeaders: [{ icon: "game-icons:sword" }, { icon: "game-icons:bad/path" }] } as never).columnHeaders).toEqual([{ icon: "game-icons:sword" }, {}]);
+    const copy = cloneSheetView(view);
+    copy.columnHeaders![0].name = "Changed";
+    expect(view.columnHeaders![0].name).toBe("Magic");
+    expect(normalizeSheetView({ ...view, columns: 3 }).columnHeaders).toEqual([{ name: "Magic", icon: "spells" }, {}, {}]);
+    expect(normalizeSheetView({ ...view, columnHeaders: undefined }).layout).toEqual(view.layout);
+  });
   it("caps columns and removes duplicate or unknown panels", () => {
     const view = normalizeSheetView({
       id: " custom ",

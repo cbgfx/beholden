@@ -7,6 +7,7 @@ export function CollectionRow({
   onClick,
   borderColor = "rgba(255,255,255,0.05)",
   padding = "6px 8px",
+  stacked = false,
 }: {
   leading?: React.ReactNode;
   main: React.ReactNode;
@@ -14,6 +15,7 @@ export function CollectionRow({
   onClick?: () => void;
   borderColor?: string;
   padding?: React.CSSProperties["padding"];
+  stacked?: boolean;
 }) {
   return (
     <div className="collectionInteractiveRow" style={{ borderBottom: `1px solid ${borderColor}` }}>
@@ -21,6 +23,7 @@ export function CollectionRow({
         onClick={onClick}
         style={{
           display: "flex",
+          flexWrap: stacked ? "wrap" : undefined,
           alignItems: "center",
           gap: 8,
           padding,
@@ -28,7 +31,7 @@ export function CollectionRow({
         }}
       >
         {leading}
-        <div style={{ flex: 1, minWidth: 0 }}>{main}</div>
+        <div style={{ flex: stacked ? "1 1 100%" : 1, minWidth: 0 }}>{main}</div>
         {trailing}
       </div>
     </div>

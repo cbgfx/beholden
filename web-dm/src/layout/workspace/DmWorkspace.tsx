@@ -1,9 +1,11 @@
+import { useColumnNavigation } from "@beholden/shared/ui/useColumnNavigation";
+import { workspaceColumnIcon } from "./workspaceColumnPresentation";
 import React from "react";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
 import { Button } from "@/ui/Button";
-import { IconCopy, IconTrash } from "@/icons";
+import { LayoutEditorToolbar } from "@beholden/shared/ui/LayoutEditorToolbar";
 import {
   defaultPreferences,
   movePanel,
@@ -13,51 +15,14 @@ import {
   type WorkspaceView,
 } from "./workspaceLayout";
 import "./workspace.css";
-
-function IconEditCrayon({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="M15 5l4 4" />
-    </svg>
-  );
-}
-
-/** Palette by Delapouite, CC BY 3.0 — https://game-icons.net/1x1/delapouite/palette.html */
-function IconPalette({ size = 19 }: { size?: number }) {
-  const gradientId = React.useId();
-  return (
-    <svg viewBox="0 0 512 512" width={size} height={size} aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop stopColor="#ff5d5d" />
-          <stop offset=".28" stopColor="#f5c451" />
-          <stop offset=".52" stopColor="#4ade80" />
-          <stop offset=".75" stopColor="#38b6ff" />
-          <stop offset="1" stopColor="#a78bfa" />
-        </linearGradient>
-      </defs>
-      <path
-        fill={`url(#${gradientId})`}
-        d="M274.2 41.6C173.6 41.2 88.5 125.5 48 233.8 7.5 338.9 48.9 473.8 138.3 471.3c89.4-2.5 18.1-99.6 65.5-146.1 34.7-34 90.6-20.1 129.2-7.3 48.7 16.1 105.3-39.4 96.2-90.7C414.4 143 308.9 73 222.2 72.7c17.7-20.6 35-31.2 52-31.1zm60.8 39.9c20.4 0 36.9 16.5 36.9 36.9s-16.5 36.9-36.9 36.9-36.9-16.5-36.9-36.9 16.5-36.9 36.9-36.9zm-119.9 4.5c20.4 0 36.9 16.5 36.9 36.9s-16.5 36.9-36.9 36.9-36.9-16.5-36.9-36.9 16.5-36.9 36.9-36.9zm-88.3 79.6c20.4 0 36.9 16.5 36.9 36.9s-16.5 36.9-36.9 36.9-36.9-16.5-36.9-36.9 16.5-36.9 36.9-36.9zm294.5 4.4c20.4 0 36.9 16.5 36.9 36.9s-16.5 36.9-36.9 36.9-36.9-16.5-36.9-36.9 16.5-36.9 36.9-36.9zM114.2 341.9c26.9 0 48.7 18.3 48.7 40.9s-21.8 40.9-48.7 40.9-48.7-18.3-48.7-40.9 21.8-40.9 48.7-40.9z"
-      />
-    </svg>
-  );
-}
-
-function IconReset({ size = 18 }: { size?: number }) {
-  return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 3v6h6" /></svg>;
-}
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
+import {
+  ColumnHeading,
+  ColumnTabs,
+  type ColumnView,
+} from "@beholden/shared/ui/ColumnNavigation";
+import { PanelCard } from "@beholden/shared/ui/LayoutPanelCard";
+import { WorkspaceBottomBar } from "./WorkspaceBottomBar";
 
 export type WorkspacePanel = {
   id: string;
@@ -72,6 +37,8 @@ type Props = {
   header?: React.ReactNode;
   allowLayoutEditing?: boolean;
   fixedLayout?: boolean;
+  /** Show one saved column at a time without changing stored layout preferences. */
+  compact?: boolean;
 };
 
 function appearanceStyle(value: PanelAppearance): React.CSSProperties {
@@ -101,8 +68,11 @@ function WorkspaceEditor({
   header,
   allowLayoutEditing = true,
   fixedLayout = false,
+  compact: compactRequested = false,
 }: Props) {
   const t = useUiTranslation("dmUi");
+  const narrow = useIsNarrow("(max-width: 1024px)");
+  const compact = compactRequested || (narrow && !fixedLayout);
   const defaults = Array.from({ length: defaultColumns }, (_, i) =>
     panels.filter((p) => p.column === i).map((p) => p.id),
   );
@@ -114,7 +84,8 @@ function WorkspaceEditor({
   const [loaded, setLoaded] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [editing, setEditing] = React.useState(false);
+  const [editingRequested, setEditing] = React.useState(false);
+  const editing = editingRequested && !compact;
   const [colorTarget, setColorTarget] = React.useState("all");
   const [showColors, setShowColors] = React.useState(false);
   const [drag, setDrag] = React.useState<{
@@ -125,27 +96,57 @@ function WorkspaceEditor({
   const [retry, setRetry] = React.useState(0);
   const [revision, setRevision] = React.useState<string | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
-  const [scrollEdges, setScrollEdges] = React.useState({ left: false, right: false });
+  const [scrollEdges, setScrollEdges] = React.useState({
+    left: false,
+    right: false,
+  });
   React.useEffect(() => {
     const element = rootRef.current;
     if (!element) return;
-    const update = () => setScrollEdges((previous) => {
-      const left = element.scrollLeft > 2;
-      const right = element.scrollWidth - element.clientWidth - element.scrollLeft > 2;
-      return previous.left === left && previous.right === right ? previous : { left, right };
-    });
+    const update = () =>
+      setScrollEdges((previous) => {
+        const left = element.scrollLeft > 2;
+        const right =
+          element.scrollWidth - element.clientWidth - element.scrollLeft > 2;
+        return previous.left === left && previous.right === right
+          ? previous
+          : { left, right };
+      });
     update();
     element.addEventListener("scroll", update, { passive: true });
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     observer?.observe(element);
     const columns = element.querySelector(".dm-workspace-columns");
     if (columns) observer?.observe(columns);
     window.addEventListener("resize", update);
-    return () => { element.removeEventListener("scroll", update); window.removeEventListener("resize", update); observer?.disconnect(); };
+    return () => {
+      element.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      observer?.disconnect();
+    };
   });
   const endpoint = `/api/me/workspaces/${workspace}`;
   const normalized = normalizePreferences(preferences, defaults);
   const view = normalized.views.find((v) => v.id === normalized.activeId)!;
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const navigation = useColumnNavigation(
+    `${workspace}:${view.id}`,
+    view.columns.length,
+    compact,
+    scrollRef,
+  );
+  const columnView: ColumnView = {
+    columns: view.columns.length,
+    columnHeaders: view.columnHeaders,
+    columnDefaults: view.columns.map((column) => {
+      const first = panels.find((panel) => panel.id === column[0]);
+      return {
+        name: first ? t(first.title) : undefined,
+        icon: workspaceColumnIcon(first?.id),
+      };
+    }),
+  };
   const viewRef = React.useRef(view);
   viewRef.current = view;
   React.useEffect(() => {
@@ -160,7 +161,14 @@ function WorkspaceEditor({
       .then((value) => {
         if (!active) return;
         const next = normalizePreferences(value, defaultsRef.current);
-        setRevision(value && typeof value === "object" && "revision" in value && typeof value.revision === "string" ? value.revision : null);
+        setRevision(
+          value &&
+            typeof value === "object" &&
+            "revision" in value &&
+            typeof value.revision === "string"
+            ? value.revision
+            : null,
+        );
         setPreferences(next);
         setLoaded(true);
         setError(null);
@@ -303,8 +311,12 @@ function WorkspaceEditor({
 
   return (
     <div
-      ref={rootRef}
-      className="dm-workspace"
+      ref={(node) => {
+        rootRef.current = node;
+        scrollRef.current =
+          node?.closest<HTMLDivElement>(".shellLayout") ?? node;
+      }}
+      className={`dm-workspace${compact ? " is-compact" : ""}`}
       style={{
         ...appearanceStyle(view.appearance),
         boxShadow: `${scrollEdges.left ? "inset 10px 0 10px -8px rgba(56, 182, 255, 0.3)" : "inset 0 0 transparent"}, ${scrollEdges.right ? "inset -10px 0 10px -8px rgba(56, 182, 255, 0.3)" : "inset 0 0 transparent"}`,
@@ -313,87 +325,81 @@ function WorkspaceEditor({
           : undefined,
       }}
     >
-      {!fixedLayout && <div className={`dm-workspace-toolbar${editing ? " is-editing" : ""}`}>
-        {!editing && (
-          <select
-            aria-label={t("Layout")}
-            value={view.id}
-            disabled={!loaded || saving}
-            onChange={(event) => {
-              const next = { ...normalized, activeId: event.target.value };
-              setPreferences(next);
-              void save(next);
-            }}
-          >
-            {normalized.views.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.id === "default" ? t(v.name) : v.name}
-              </option>
-            ))}
-          </select>
-        )}
-        {!editing && allowLayoutEditing ? (
-          <>
-            <button
-              className="dm-workspace-icon-button"
-              type="button"
+      {!fixedLayout && (
+        <div className={`dm-workspace-toolbar${editing ? " is-editing" : ""}`}>
+          {!editing && (
+            <select
+              aria-label={t("Layout")}
+              value={view.id}
               disabled={!loaded || saving}
-              onClick={() => setEditing(true)}
-              title={t("Customize layout")}
-              aria-label={t("Customize layout")}
+              onChange={(event) => {
+                const next = { ...normalized, activeId: event.target.value };
+                setPreferences(next);
+                void save(next);
+              }}
             >
-              <IconEditCrayon />
-            </button>
-          </>
-        ) : editing ? (
-          <>
-            <input
-              aria-label={t("Layout name")}
-              value={
-                preferences.views.find((v) => v.id === view.id)?.name ??
-                view.name
-              }
-              maxLength={60}
-              disabled={saving}
-              onChange={(event) =>
-                updateView((v) => ({ ...v, name: event.target.value }))
-              }
-            />
-            <label title={t("Columns")}>
-              <select
-                aria-label={t("Columns")}
-                value={view.columns.length}
-                disabled={saving}
-                onChange={(event) =>
-                  updateView((v) => ({
-                    ...v,
-                    columns: resizeColumns(
-                      v.columns,
-                      Number(event.target.value),
-                    ),
-                  }))
-                }
+              {normalized.views.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.id === "default" ? t(v.name) : v.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {!editing && allowLayoutEditing && !compact ? (
+            <>
+              <button
+                className="dm-workspace-icon-button"
+                type="button"
+                disabled={!loaded || saving}
+                onClick={() => setEditing(true)}
+                title={t("Customize layout")}
+                aria-label={t("Customize layout")}
               >
-                {[1, 2, 3, 4].map((n) => (
-                  <option key={n}>{n}</option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="dm-workspace-icon-button dm-workspace-palette-button"
-              type="button"
+                <span aria-hidden="true">&#9998;</span>
+              </button>
+            </>
+          ) : editing ? (
+            <LayoutEditorToolbar
+              activeView={{ ...view, columns: view.columns.length }}
+              panels={panels.map((panel) => ({
+                id: panel.id,
+                title: t(panel.title),
+              }))}
+              minColumns={1}
+              maxColumns={4}
+              protectedView={false}
+              canReset
+              canDuplicate={normalized.views.length < 12}
+              canDelete={normalized.views.length > 1}
               disabled={saving}
-              onClick={() => setShowColors((value) => !value)}
-              title={t("Colours")}
-              aria-label={t("Colours")}
-            >
-              <IconPalette />
-            </button>
-            <button
-              className="dm-workspace-icon-button"
-              type="button"
-              disabled={saving || normalized.views.length >= 12}
-              onClick={() => {
+              onRename={(name) => updateView((v) => ({ ...v, name }))}
+              onAddColumn={() =>
+                updateView((v) => ({
+                  ...v,
+                  columns: resizeColumns(v.columns, v.columns.length + 1),
+                }))
+              }
+              onRemoveColumn={() =>
+                updateView((v) => ({
+                  ...v,
+                  columns: resizeColumns(v.columns, v.columns.length - 1),
+                  columnHeaders: v.columnHeaders?.slice(
+                    0,
+                    v.columns.length - 1,
+                  ),
+                }))
+              }
+              onReset={() =>
+                updateView((v) => ({
+                  ...v,
+                  columns: defaults.map((c) => [...c]),
+                  columnHeaders: [],
+                  colors: {},
+                  appearance: {},
+                }))
+              }
+              onDuplicate={() => {
+                if (normalized.views.length >= 12) return;
                 const copy = {
                   ...view,
                   id: crypto.randomUUID(),
@@ -404,62 +410,39 @@ function WorkspaceEditor({
                   views: [...normalized.views, copy],
                 });
               }}
-              title={t("Duplicate")}
-              aria-label={t("Duplicate")}
-            >
-              <IconCopy size={18} />
-            </button>
-            <button
-              className="dm-workspace-icon-button"
-              type="button"
-              disabled={saving}
-              onClick={() =>
-                updateView((v) => ({
-                  ...v,
-                  columns: defaults.map((c) => [...c]),
-                  colors: {},
-                  appearance: {},
-                }))
-              }
-              title={t("Reset layout")}
-              aria-label={t("Reset layout")}
-            >
-              <IconReset />
-            </button>
-            <button
-              className="dm-workspace-icon-button is-danger"
-              type="button"
-              disabled={saving || normalized.views.length <= 1}
-              onClick={() => {
+              onDelete={() => {
                 const remaining = normalized.views.filter(
                   (v) => v.id !== view.id,
                 );
                 setPreferences({ activeId: remaining[0].id, views: remaining });
               }}
-              title={t("Delete layout")}
-              aria-label={t("Delete layout")}
-            >
-              <IconTrash size={18} />
-            </button>
-            <Button
-              variant="ghost"
-              disabled={
-                saving ||
-                !preferences.views.find((v) => v.id === view.id)?.name.trim()
-              }
-              onClick={() => void save()}
-              style={{
-                color: "var(--dm-panel-accent, var(--campaign-accent, #a78bfa))",
-                borderColor: "color-mix(in srgb, var(--dm-panel-accent, var(--campaign-accent, #a78bfa)) 50%, transparent)",
-                background: "color-mix(in srgb, var(--dm-panel-accent, var(--campaign-accent, #a78bfa)) 12%, transparent)",
-                fontWeight: 800,
+              colorsOpen={showColors}
+              colorTarget={colorTarget}
+              globalColors={{
+                accent: color.accent ?? view.appearance.accent ?? "#38b6ff",
+                background:
+                  color.background ?? view.appearance.background ?? "#182032",
+                text: color.text ?? view.appearance.text ?? "#e8edf5",
               }}
-            >
-              {saving ? t("Saving...") : t("Done")}
-            </Button>
-          </>
-        ) : null}
-      </div>}
+              onToggleColors={() => setShowColors((value) => !value)}
+              onColorTargetChange={setColorTarget}
+              onColorChange={(key, value) =>
+                setColor({ ...color, [key]: value })
+              }
+              onResetColors={() => setColor({})}
+              trailing={
+                <Button
+                  variant="ghost"
+                  disabled={saving}
+                  onClick={() => void save()}
+                >
+                  {saving ? t("Saving...") : t("Done")}
+                </Button>
+              }
+            />
+          ) : null}
+        </div>
+      )}
       {error && (
         <div role="alert" style={{ color: "#ff5d5d" }}>
           {t(error)}{" "}
@@ -473,68 +456,49 @@ function WorkspaceEditor({
           )}
         </div>
       )}
-      {editing && showColors && (
-        <div className="dm-workspace-colors">
-          <select
-            aria-label={t("Colour target")}
-            value={colorTarget}
-            onChange={(event) => setColorTarget(event.target.value)}
-            disabled={saving}
-          >
-            <option value="all">{t("All panels")}</option>
-            {panels.map((panel) => (
-              <option key={panel.id} value={panel.id}>
-                {t(panel.title)}
-              </option>
-            ))}
-          </select>
-          {(
-            [
-              ["accent", "Accent", "#a78bfa"],
-              ["background", "Panel background", "#182032"],
-              ["text", "Text", "#e8edf5"],
-            ] as const
-          ).map(([key, label, fallback]) => (
-            <label key={key}>
-              {t(label)}{" "}
-              <input
-                type="color"
-                aria-label={t(label)}
-                value={color[key] ?? view.appearance[key] ?? fallback}
-                disabled={saving}
-                onChange={(event) =>
-                  setColor({ ...color, [key]: event.target.value })
-                }
-              />
-            </label>
-          ))}
-          <Button
-            variant="ghost"
-            disabled={saving}
-            onClick={() => setColor({})}
-          >
-            {t("Reset colours")}
-          </Button>
-        </div>
-      )}
-      {editing && (
-        <p className="dm-workspace-hint">
-          {t(
-            "Drag a panel by its handle, or use the arrows to move it. Save when finished.",
-          )}
-        </p>
-      )}
       {header}
       <div
         className="dm-workspace-columns"
-        style={{ "--dm-columns": view.columns.length } as React.CSSProperties}
+        style={
+          {
+            "--dm-columns": view.columns.length,
+            ...(compact ? { gridTemplateColumns: "minmax(0, 1fr)" } : {}),
+          } as React.CSSProperties
+        }
       >
         {view.columns.map((column, columnIndex) => (
           <div
             key={columnIndex}
+            hidden={compact && navigation.active !== columnIndex}
+            style={
+              compact && navigation.active !== columnIndex
+                ? { display: "none" }
+                : undefined
+            }
             data-workspace-column={columnIndex}
             className={`dm-workspace-column${editing ? " editing" : ""}`}
           >
+            {compact ||
+            editing ||
+            view.columnHeaders?.[columnIndex]?.name ||
+            view.columnHeaders?.[columnIndex]?.icon ? (
+              <ColumnHeading
+                view={columnView}
+                index={columnIndex}
+                editing={editing}
+                accent="var(--dm-panel-accent, var(--campaign-accent, #38b6ff))"
+                onChange={(header) =>
+                  updateView((v) => ({
+                    ...v,
+                    columnHeaders: v.columns.map((_, index) =>
+                      index === columnIndex
+                        ? header
+                        : (v.columnHeaders?.[index] ?? {}),
+                    ),
+                  }))
+                }
+              />
+            ) : null}
             {column.map((id, index) => {
               const panel = panels.find((p) => p.id === id);
               if (!panel) return null;
@@ -549,64 +513,60 @@ function WorkspaceEditor({
                     opacity: dragId === id ? 0.45 : 1,
                   }}
                 >
-                  {editing && (
-                    <div className="dm-workspace-panel-tools">
-                      <button
-                        type="button"
-                        aria-label={`${t("Move panel")}: ${t(panel.title)}`}
-                        disabled={saving}
-                        style={{ touchAction: "none", cursor: "grab" }}
-                        onPointerDown={(event) => {
-                          if (event.button !== 0) return;
-                          event.preventDefault();
-                          setDrag({ id, x: event.clientX, y: event.clientY });
-                        }}
-                      >
-                        ⠿
-                      </button>
-                      <span>{t(panel.title)}</span>
-                      {(
-                        [
-                          ["left", "←"],
-                          ["up", "↑"],
-                          ["down", "↓"],
-                          ["right", "→"],
-                        ] as const
-                      ).map(([direction, symbol]) => (
-                        <button
-                          key={direction}
-                          type="button"
-                          aria-label={`${t(`Move ${direction}`)}: ${t(panel.title)}`}
-                          disabled={
-                            saving ||
-                            (direction === "left"
-                              ? columnIndex === 0
-                              : direction === "right"
-                                ? columnIndex === view.columns.length - 1
-                                : direction === "up"
-                                  ? index === 0
-                                  : index === column.length - 1)
-                          }
-                          onClick={() =>
-                            nudge(id, columnIndex, index, direction)
-                          }
-                        >
-                          {symbol}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        aria-label={`${t("Colours")}: ${t(panel.title)}`}
-                        onClick={() => {
-                          setColorTarget(id);
-                          setShowColors(true);
-                        }}
-                      >
-                        ◉
-                      </button>
-                    </div>
+                  {editing ? (
+                    <PanelCard
+                      title={t(panel.title)}
+                      dragging={dragId === id}
+                      rowRef={() => {}}
+                      onPointerDown={(event) => {
+                        if (event.button !== 0 || saving) return;
+                        event.preventDefault();
+                        setDrag({ id, x: event.clientX, y: event.clientY });
+                      }}
+                      onOpenColors={() => {
+                        setColorTarget(id);
+                        setShowColors(true);
+                      }}
+                      actions={
+                        <details className="dm-workspace-move-menu">
+                          <summary
+                            aria-label={`${t("Move panel")}: ${t(panel.title)}`}
+                          >
+                            ...
+                          </summary>
+                          <div>
+                            {(["left", "up", "down", "right"] as const).map(
+                              (direction) => (
+                                <button
+                                  key={direction}
+                                  type="button"
+                                  aria-label={`${t(`Move ${direction}`)}: ${t(panel.title)}`}
+                                  disabled={
+                                    saving ||
+                                    (direction === "left"
+                                      ? columnIndex === 0
+                                      : direction === "right"
+                                        ? columnIndex ===
+                                          view.columns.length - 1
+                                        : direction === "up"
+                                          ? index === 0
+                                          : index === column.length - 1)
+                                  }
+                                  onClick={() =>
+                                    nudge(id, columnIndex, index, direction)
+                                  }
+                                >
+                                  {t(`Move ${direction}`)}
+                                </button>
+                              ),
+                            )}
+                          </div>
+                        </details>
+                      }
+                    />
+                  ) : (
+                    panel.content
                   )}
-                  {panel.content}
                 </section>
               );
             })}
@@ -616,6 +576,16 @@ function WorkspaceEditor({
           </div>
         ))}
       </div>
+      {compact ? (
+        <WorkspaceBottomBar>
+          <ColumnTabs
+            view={columnView}
+            active={navigation.active}
+            onSelect={navigation.select}
+            accent="var(--dm-panel-accent, var(--campaign-accent, #38b6ff))"
+          />
+        </WorkspaceBottomBar>
+      ) : null}
       {drag && (
         <div
           className="dm-workspace-drag"

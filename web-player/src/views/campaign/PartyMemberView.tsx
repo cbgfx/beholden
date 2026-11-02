@@ -14,6 +14,7 @@ import { PartyMemberHeader } from "./PartyMemberHeader";
 import { PartyMemberStatsColumn } from "./PartyMemberStatsColumn";
 import { PartyMemberProficienciesColumn } from "./PartyMemberProficienciesColumn";
 import { useUiTranslation } from "@beholden/shared/i18n";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
 export interface NamedEntry {
   name: string;
@@ -80,18 +81,6 @@ function toNoteEntries(value: unknown): NoteEntry[] {
     .filter((note): note is NoteEntry => Boolean(note && note.id.length > 0));
 }
 
-function useViewportWidth() {
-  const [width, setWidth] = React.useState<number>(() => (typeof window === "undefined" ? 1440 : window.innerWidth));
-
-  React.useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  return width;
-}
-
 export function PartyMemberView() {
   const t = useUiTranslation("playerUi");
   const translateMessage = useUiMessages("playerUi");
@@ -101,7 +90,8 @@ export function PartyMemberView() {
   const [error, setError] = React.useState<string | null>(null);
   const [expandedFeatureIds, setExpandedFeatureIds] = React.useState<Record<string, boolean>>({});
   const [expandedNoteIds, setExpandedNoteIds] = React.useState<Record<string, boolean>>({});
-  const viewportWidth = useViewportWidth();
+  const isPhone = useIsNarrow("(width < 900px)");
+  const isTablet = useIsNarrow("(width < 1220px)");
 
   const fetchMember = React.useCallback(() => {
     if (!campaignId || !playerId) return;
@@ -232,8 +222,6 @@ export function PartyMemberView() {
   const invocations = classSelections.flatMap((selection) => selection.chosenInvocations ?? []);
 
   const allNotes = [...sharedNotes, ...playerNotes];
-  const isPhone = viewportWidth < 900;
-  const isTablet = viewportWidth < 1220;
 
   const contentPadding = isPhone ? "16px 14px 32px" : "24px 24px 48px";
   const columnsTemplate = isPhone ? "1fr" : isTablet ? "1fr 1fr" : "1fr 1fr 1fr";

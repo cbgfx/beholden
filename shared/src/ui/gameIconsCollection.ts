@@ -15,12 +15,15 @@ function loadGameIconNames(): Promise<string[]> {
   if (namesCache) return Promise.resolve(namesCache);
   loadPromise ??= fetch(COLLECTION_URL)
     .then((response) => {
-      if (!response.ok) throw new Error(`Icon catalog request failed (${response.status}).`);
+      if (!response.ok)
+        throw new Error(`Icon catalog request failed (${response.status}).`);
       return response.json() as Promise<IconifyCollectionResponse>;
     })
     .then((collection) => {
       const names = new Set(collection.uncategorized ?? []);
-      Object.values(collection.categories ?? {}).forEach((category) => category.forEach((name) => names.add(name)));
+      Object.values(collection.categories ?? {}).forEach((category) =>
+        category.forEach((name) => names.add(name)),
+      );
       namesCache = Array.from(names).sort();
       return namesCache;
     })
@@ -37,14 +40,28 @@ export function useGameIconNames(): string[] | null {
   useEffect(() => {
     if (namesCache) return;
     let cancelled = false;
-    void loadGameIconNames().then((list) => { if (!cancelled) setNames(list); }).catch(() => {
-      if (!cancelled) setNames([]);
-    });
-    return () => { cancelled = true; };
+    void loadGameIconNames()
+      .then((list) => {
+        if (!cancelled) setNames(list);
+      })
+      .catch(() => {
+        if (!cancelled) setNames([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   return names;
 }
 
-export function toGameIconId(name: string): string { return `${GAME_ICONS_PREFIX}:${name}`; }
-export function trimGameIconPrefix(iconId: string): string { return iconId.startsWith(`${GAME_ICONS_PREFIX}:`) ? iconId.slice(GAME_ICONS_PREFIX.length + 1) : iconId; }
-export function normalizeIconSearchText(raw: string): string { return trimGameIconPrefix(raw).toLowerCase().replace(/[-_]+/g, " ").trim(); }
+export function toGameIconId(name: string): `game-icons:${string}` {
+  return `${GAME_ICONS_PREFIX}:${name}`;
+}
+export function trimGameIconPrefix(iconId: string): string {
+  return iconId.startsWith(`${GAME_ICONS_PREFIX}:`)
+    ? iconId.slice(GAME_ICONS_PREFIX.length + 1)
+    : iconId;
+}
+export function normalizeIconSearchText(raw: string): string {
+  return trimGameIconPrefix(raw).toLowerCase().replace(/[-_]+/g, " ").trim();
+}

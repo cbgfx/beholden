@@ -17,7 +17,7 @@ export function CharacterViewSwitcher(props: {
   activeViewId: string;
   accentColor: string;
   onSelectView: (id: string) => void;
-  onCreateView: () => void;
+  onCreateView?: () => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
   const { sheetViews, activeViewId, accentColor, onSelectView, onCreateView } = props;
@@ -112,7 +112,7 @@ export function CharacterViewSwitcher(props: {
         );
       })}
       <div style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
-      <button
+      {onCreateView && <button
         type="button"
         onClick={() => { onCreateView(); setOpen(false); }}
         style={{
@@ -128,12 +128,12 @@ export function CharacterViewSwitcher(props: {
         }}
       >
         {translateUi("+ Add View")}
-      </button>
+      </button>}
     </div>
   ) : null;
 
   return (
-    <div ref={rootRef} style={{ position: "relative" }}>
+    <div ref={rootRef} style={{ position: "relative", minWidth: 0, maxWidth: "100%" }}>
       <button
         type="button"
         aria-haspopup="listbox"
@@ -141,6 +141,8 @@ export function CharacterViewSwitcher(props: {
         onClick={() => setOpen((value) => !value)}
         style={{
           display: "flex",
+          minWidth: 0,
+          maxWidth: "100%",
           alignItems: "center",
           gap: 8,
           padding: "6px 13px",
@@ -153,7 +155,7 @@ export function CharacterViewSwitcher(props: {
           cursor: "pointer",
         }}
       >
-        {(activeView ? viewName(activeView) : undefined) ?? "View"}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(activeView ? viewName(activeView) : undefined) ?? "View"}</span>
         <span style={{ opacity: 0.7, fontWeight: 900 }}>▾</span>
       </button>
       {open ? ReactDOM.createPortal(menu, document.body) : null}

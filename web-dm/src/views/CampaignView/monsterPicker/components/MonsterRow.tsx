@@ -9,6 +9,7 @@ import { QtyStepper } from "@/views/CampaignView/monsterPicker/components/QtySte
 
 export function MonsterRow(props: {
   row: CompendiumMonsterRow;
+  compact?: boolean;
   active: boolean;
   qty: number;
   onSelect: () => void;
@@ -49,8 +50,11 @@ export function MonsterRow(props: {
   return (
     <div
       onClick={props.onSelect}
+      role="button" tabIndex={0} aria-label={m.name}
+      onKeyDown={(event) => { if (event.target !== event.currentTarget) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); props.onSelect(); } }}
       style={{
-        height: 86,
+        height: props.compact ? 150 : 86,
+        minWidth: 0,
         padding: 10,
         boxSizing: "border-box",
         borderRadius: 12,
@@ -59,13 +63,13 @@ export function MonsterRow(props: {
         marginBottom: 8,
         cursor: "pointer",
         display: "grid",
-        gridTemplateColumns: "1fr auto",
+        gridTemplateColumns: props.compact ? "minmax(0, 1fr)" : "minmax(0, 1fr) auto",
         gap: 5,
         alignItems: "center",
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <div style={{ color: theme.colors.text, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+        <div style={{ color: theme.colors.text, fontWeight: 900, whiteSpace: props.compact ? "normal" : "nowrap", overflow: "hidden", textOverflow: "ellipsis", overflowWrap: "anywhere", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{m.name}</div>
         <div style={{ color: theme.colors.muted, fontSize: "var(--fs-medium)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {translateUi("CR {{value1}}", { value1: formatCr(m.cr) })}
           {m.type ? ` - ${m.type}` : ""}
@@ -73,7 +77,7 @@ export function MonsterRow(props: {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 4, alignItems: "center", justifyContent: "space-between", minWidth: 0 }}>
         <QtyStepper value={props.qty} onChange={props.onChangeQty} />
         <Button
           type="button"

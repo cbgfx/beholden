@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
@@ -27,6 +28,7 @@ export function SpellDrawer({
   onRemove?: () => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const textArr = Array.isArray(spell.text) ? spell.text : [String(spell.text ?? "")];
   const isConc = Boolean(spell.concentration);
   const isRitual = Boolean(spell.ritual);
@@ -40,6 +42,7 @@ export function SpellDrawer({
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 201,
         width: "min(420px, 92vw)",
+        ...(phone ? { maxHeight: "100dvh", overflowWrap: "anywhere", paddingBottom: "env(safe-area-inset-bottom, 0px)" } : {}),
         background: "#111827",
         borderLeft: "1px solid rgba(255,255,255,0.1)",
         boxShadow: "-12px 0 40px rgba(0,0,0,0.5)",
@@ -68,7 +71,7 @@ export function SpellDrawer({
         </div>
 
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+          display: "grid", gridTemplateColumns: phone ? "minmax(0,1fr)" : "repeat(3, 1fr)",
           gap: 1, background: "rgba(255,255,255,0.05)",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}>

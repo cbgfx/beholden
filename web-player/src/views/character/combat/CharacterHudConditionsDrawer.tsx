@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { RightDrawer } from "@/ui/RightDrawer";
@@ -22,6 +23,7 @@ export function CharacterHudConditionsDrawer(props: {
   onClose: () => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const { condPickerOpen, availableConditions, accentColor, conditions, condSaving, toggleCondition, onClose } = props;
 
   if (!condPickerOpen) return null;
@@ -45,7 +47,7 @@ export function CharacterHudConditionsDrawer(props: {
     >
       <div style={{ display: "grid", gap: 16 }}>
         {conditionGroups.map((group, groupIndex) => (
-          <div key={groupIndex} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div key={groupIndex} style={{ display: "grid", gridTemplateColumns: phone ? "repeat(2, minmax(0,1fr))" : "1fr 1fr 1fr", gap: 8 }}>
             {group.map((cd) => {
               const active = conditions.some((c) => c.key === cd.key);
               return (

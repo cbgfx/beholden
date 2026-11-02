@@ -50,6 +50,7 @@ export function StatBar(props: { icon: React.ReactNode; label: string; value: Re
     <div
       style={{
         flex: props.flex ?? 1,
+        minWidth: 0,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -57,10 +58,10 @@ export function StatBar(props: { icon: React.ReactNode; label: string; value: Re
         padding: props.compact ? "6px 8px" : "8px 10px",
       }}
     >
-      <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: C.muted, whiteSpace: "nowrap" }}>
+      <div style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, letterSpacing: 1.2, textTransform: "uppercase", color: C.muted, whiteSpace: props.compact ? "normal" : "nowrap", textAlign: "center", overflowWrap: "anywhere" }}>
         {props.label}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: props.compact ? "var(--fs-title)" : "var(--fs-stat)", color: C.text }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: props.compact ? "var(--fs-subtitle)" : "var(--fs-stat)", color: C.text }}>
         <span style={{ opacity: 0.65, display: "flex", alignItems: "center" }}>{props.icon}</span>
         <span style={{ fontVariantNumeric: "tabular-nums" }}>{props.value}</span>
       </div>
@@ -68,7 +69,7 @@ export function StatBar(props: { icon: React.ReactNode; label: string; value: Re
   );
 }
 
-function Vitals({ stats, compact }: { stats: CharacterSheetStats; compact: boolean }) {
+function Vitals({ stats, compact, condensed }: { stats: CharacterSheetStats; compact: boolean; condensed?: boolean }) {
   const translateUi = useUiTranslation("sharedUi");
   const speedText = stats.speedDisplay?.trim() || (stats.speed == null ? "--" : `${stats.speed} ft.`);
   const hpText = Number.isFinite(stats.hpCur) && Number.isFinite(stats.hpMax) && stats.hpMax > 0 ? `${stats.hpCur} / ${stats.hpMax}` : "--";
@@ -77,7 +78,8 @@ function Vitals({ stats, compact }: { stats: CharacterSheetStats; compact: boole
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(auto-fit, minmax(${compact ? 120 : 140}px, 1fr))`,
+        gridTemplateColumns: condensed ? "repeat(3, minmax(0, 1fr))" : `repeat(auto-fit, minmax(${compact ? 120 : 140}px, 1fr))`,
+        minWidth: 0,
         borderRadius: 12,
         border: `1px solid ${C.panelBorder}`,
         background: C.panelBg,
@@ -131,11 +133,11 @@ function DetailLines({ infoLines, compact }: { infoLines?: Array<{ label: string
  * Vitals, ability scores with saves, and a collapsible list of details (senses, languages...).
  * Used by monster stat blocks and the DM's combatant details.
  */
-export function CharacterSheetPanel(props: { stats: CharacterSheetStats; compact?: boolean; hideVitals?: boolean }) {
+export function CharacterSheetPanel(props: { stats: CharacterSheetStats; compact?: boolean; condensed?: boolean; hideVitals?: boolean }) {
   const compact = props.compact ?? false;
   return (
-    <div style={{ display: "grid", gap: compact ? 8 : 10 }}>
-      {!props.hideVitals && <Vitals stats={props.stats} compact={compact} />}
+    <div style={{ display: "grid", minWidth: 0, gap: compact ? 8 : 10 }}>
+      {!props.hideVitals && <Vitals stats={props.stats} compact={compact} condensed={props.condensed} />}
       <div style={{ borderRadius: 12, border: `1px solid ${C.panelBorder}`, background: C.panelBg, padding: compact ? "6px 10px" : "8px 12px" }}>
         <AbilityScoresCompact
           scores={props.stats.abilities}

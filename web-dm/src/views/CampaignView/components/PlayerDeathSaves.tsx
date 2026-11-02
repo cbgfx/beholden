@@ -73,7 +73,7 @@ export function PlayerDeathSaves({ playerId, encounterId, combatantId, variant, 
   );
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 10, alignItems: "center" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: "var(--fs-small)", fontWeight: 900, color: theme.colors.green }}>S</span>
         {dots(deathSaves.s, theme.colors.green, (i, on) => {

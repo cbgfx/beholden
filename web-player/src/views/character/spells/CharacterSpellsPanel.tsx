@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { countOrdinaryPreparations } from "@beholden/shared/domain/progressionRequirements";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
@@ -113,6 +114,7 @@ export function RichSpellsPanel({
   onToggleCondition?: (key: string) => Promise<void> | void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<{ detail: FetchedSpellDetail; source?: string | null; rawName: string; removable: boolean } | null>(
     null,
@@ -381,7 +383,7 @@ export function RichSpellsPanel({
                 key={state.classEntryId}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(0,1fr) repeat(3, auto)",
+                  gridTemplateColumns: phone ? "repeat(2, minmax(0,1fr))" : "minmax(0,1fr) repeat(3, auto)",
                   gap: 12,
                   alignItems: "center",
                   padding: "7px 10px",
@@ -558,9 +560,9 @@ export function RichSpellsPanel({
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") toggleSection(sectionKey);
                     }}
-                    style={spellSectionHeaderBtn(`${accentColor}44`, 8)}
+                    style={{ ...spellSectionHeaderBtn(`${accentColor}44`, 8), ...(phone ? { minHeight: 44, flexWrap: "wrap" } : {}) }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, ...(phone ? { flexWrap: "wrap", minWidth: 0 } : {}) }}>
                       <span aria-hidden="true" style={spellSectionArrow(isCollapsed, accentColor)}>
                         ▼
                       </span>
@@ -572,7 +574,7 @@ export function RichSpellsPanel({
                             : (LEVEL_LABELS[level] ?? translateUi("Level {{value1}}", { value1: level }))}
                       </div>
                       {maxSlots > 0 && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, ...(phone ? { flexWrap: "wrap", maxWidth: "100%" } : {}) }}>
                           <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>
                             {translateUi("slots")} {remaining}/{maxSlots}
                           </span>
@@ -606,7 +608,7 @@ export function RichSpellsPanel({
                   {!isCollapsed && (
                     <>
                       {/* Column headers */}
-                      <div style={{ display: "grid", gridTemplateColumns: spellRowGrid, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
+                      <div hidden={phone} style={{ display: phone ? "none" : "grid", gridTemplateColumns: spellRowGrid, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
                         {usesFlexiblePreparedList && (
                           <div style={spellColumnHeaderStyle}>
                             {usesPreparedSpellSelection ? translateUi("PREP") : usesFlexiblePreparedList ? translateUi("LIST") : translateUi("KNOWN")}

@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
@@ -62,6 +63,7 @@ export function CharacterSpellRow({
   onSelect: () => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const d = detail;
   const isAlwaysPrepared = entry.forcedPrepared;
   const conc = d ? Boolean(d.concentration) : false;
@@ -71,8 +73,9 @@ export function CharacterSpellRow({
   return (
     <div className="character-hover-row" style={{
       display: "grid",
-      gridTemplateColumns: spellRowGrid,
-      alignItems: "center", gap: "0 8px",
+      gridTemplateColumns: phone ? "repeat(2, minmax(0, 1fr))" : spellRowGrid,
+      overflowWrap: phone ? "anywhere" : undefined,
+      alignItems: "center", gap: phone ? "8px" : "0 8px",
       margin: "0 -8px", padding: "7px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)",
       cursor: d ? "pointer" : "default",
     }}
@@ -107,7 +110,7 @@ export function CharacterSpellRow({
                     : translateUi("Mark prepared")
           }
           style={{
-            width: 20, height: 20, borderRadius: "50%", padding: 0,
+            width: phone ? 44 : 20, height: phone ? 44 : 20, borderRadius: "50%", padding: 0,
             cursor: !usesPreparedSpellSelection || isCantrip || isAlwaysPrepared || preparedLocked ? "default" : "pointer",
             border: `2px solid ${
               isAlwaysPrepared
@@ -124,7 +127,7 @@ export function CharacterSpellRow({
       )}
 
       {/* Name + meta */}
-      <div style={{ minWidth: 0 }} title={entry.source ? translateUi("Granted by: {{value1}}{{value2}}", { value1: entry.source, value2: entry.level != null ? ` (Level ${entry.level})` : "" }) : undefined}>
+      <div style={{ minWidth: 0, ...(phone ? { gridColumn: "1 / -1", gridRow: 1 } : {}) }} title={entry.source ? translateUi("Granted by: {{value1}}{{value2}}", { value1: entry.source, value2: entry.level != null ? ` (Level ${entry.level})` : "" }) : undefined}>
         <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: isPrepared ? C.text : C.muted }}>
           {entry.searchName}
           {conc && <span title={translateUi("Concentration")} style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}
@@ -136,7 +139,7 @@ export function CharacterSpellRow({
 
       {/* Time */}
       <div style={{ minWidth: 0, fontSize: "var(--fs-small)", color: C.muted, textAlign: "center", lineHeight: 1.25 }}>
-        {d ? abbrevTime(d.time ?? "—") : ""}
+        {phone ? `${translateUi("TIME")}: ` : ""}{d ? abbrevTime(d.time ?? "—") : ""}
       </div>
 
       {/* HIT / SAVE */}

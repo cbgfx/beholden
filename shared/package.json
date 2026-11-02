@@ -10,6 +10,7 @@
     "./domain/actors": "./src/domain/actors.ts",
     "./domain/conditions": "./src/domain/conditions.ts",
     "./domain/longRest": "./src/domain/longRest.ts",
+    "./domain/layoutColumns": "./src/domain/layoutColumns.ts",
     "./domain/hitDice": "./src/domain/hitDice.ts",
     "./domain/spellPreparation": "./src/domain/spellPreparation.ts",
     "./domain/combatTurnOrder": "./src/domain/combatTurnOrder.ts",
@@ -83,6 +84,7 @@
     }
   },
   "dependencies": {
+    "@iconify/react": "^6.0.4",
     "i18next": "^26.5.2",
     "react-i18next": "^17.1.0",
     "zod": "^4.6.7"

@@ -1,8 +1,13 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
-﻿import * as React from "react";
+import * as React from "react";
 import { theme } from "@/theme/theme";
 import { IconAttack, IconHeal, IconConditions, IconBulkDamage } from "@/icons";
-import { rollDiceExpr, hasDiceTerm, sanitizeDiceInput } from "@/views/CombatView/utils/dice";
+import {
+  rollDiceExpr,
+  hasDiceTerm,
+  sanitizeDiceInput,
+} from "@/views/CombatView/utils/dice";
 
 type Props = {
   value: string;
@@ -25,20 +30,26 @@ function HexButton({
   disabled,
   onClick,
   variant,
-  children
+  children,
+  compact,
 }: {
   title: string;
+  compact?: boolean;
   disabled?: boolean;
   onClick: () => void;
   variant: "damage" | "heal" | "neutral" | "dice" | "bulk";
   children: React.ReactNode;
 }) {
   const bg =
-    variant === "damage"   ? theme.colors.red
-    : variant === "heal"   ? theme.colors.green
-    : variant === "dice"   ? theme.colors.accentPrimary
-    : variant === "bulk"   ? theme.colors.accentWarning
-    : theme.colors.accentPrimary;
+    variant === "damage"
+      ? theme.colors.red
+      : variant === "heal"
+        ? theme.colors.green
+        : variant === "dice"
+          ? theme.colors.accentPrimary
+          : variant === "bulk"
+            ? theme.colors.accentWarning
+            : theme.colors.accentPrimary;
   const fg = theme.colors.text;
 
   return (
@@ -48,33 +59,41 @@ function HexButton({
       disabled={disabled}
       onClick={onClick}
       style={{
-        width: 56,
-        height: 52,
+        width: compact ? "100%" : 56,
+        minWidth: 0,
+        height: compact ? 44 : 52,
+        borderRadius: compact ? 8 : undefined,
         display: "grid",
         placeItems: "center",
         cursor: disabled ? "not-allowed" : "pointer",
         border: `2px solid ${theme.colors.panelBorder}`,
         background: bg,
         color: fg,
-        clipPath:
-          "polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%)",
+        clipPath: compact
+          ? "none"
+          : "polygon(25% 4%, 75% 4%, 98% 50%, 75% 96%, 25% 96%, 2% 50%)",
         boxShadow: disabled
           ? "none"
           : `0 2px 0 0 ${theme.colors.panelBorder}, 0 0 0 2px rgba(0,0,0,0.08) inset`,
-        animation: disabled ? "none" : "beholdenHexPulse 2.2s ease-in-out infinite",
+        animation: disabled
+          ? "none"
+          : "beholdenHexPulse 2.2s ease-in-out infinite",
         opacity: disabled ? 0.5 : 1,
         transition: "transform 80ms ease, filter 120ms ease",
-        userSelect: "none"
+        userSelect: "none",
       }}
       onMouseDown={(e) => {
         if (disabled) return;
-        (e.currentTarget as HTMLButtonElement).style.transform = "translateY(1px)";
+        (e.currentTarget as HTMLButtonElement).style.transform =
+          "translateY(1px)";
       }}
       onMouseUp={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0px)";
+        (e.currentTarget as HTMLButtonElement).style.transform =
+          "translateY(0px)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0px)";
+        (e.currentTarget as HTMLButtonElement).style.transform =
+          "translateY(0px)";
       }}
     >
       {children}
@@ -84,6 +103,7 @@ function HexButton({
 
 export function CombatDeltaControls(props: Props) {
   const translateUi = useUiTranslation("dmUi");
+  const compact = useIsNarrow("(max-width: 1024px)");
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const { onChange, value } = props;
 
@@ -96,9 +116,12 @@ export function CombatDeltaControls(props: Props) {
   // Show dice roll flash briefly after a preview roll.
   const [lastRoll, setLastRoll] = React.useState<number | null>(null);
   const flashRef = React.useRef<number | null>(null);
-  React.useEffect(() => () => {
-    if (flashRef.current != null) window.clearTimeout(flashRef.current);
-  }, []);
+  React.useEffect(
+    () => () => {
+      if (flashRef.current != null) window.clearTimeout(flashRef.current);
+    },
+    [],
+  );
 
   const isDiceExpr = hasDiceTerm(props.value);
 
@@ -127,7 +150,10 @@ export function CombatDeltaControls(props: Props) {
       const el = document.activeElement as HTMLElement | null;
       if (el && el !== inputRef.current) {
         const tag = (el.tagName || "").toUpperCase();
-        const isTextField = tag === "INPUT" || tag === "TEXTAREA" || (el as any).isContentEditable;
+        const isTextField =
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          (el as any).isContentEditable;
         if (isTextField) return;
       }
       inputRef.current?.focus();
@@ -152,37 +178,65 @@ export function CombatDeltaControls(props: Props) {
 
       <div
         style={{
-          display: "flex",
+          display: compact ? "grid" : "flex",
+          gridTemplateColumns: compact
+            ? `repeat(${2 + (props.onToggleBulkMode ? 1 : 0) + (hasConditions ? 1 : 0)}, minmax(0, 1fr))`
+            : undefined,
+          flexWrap: "wrap",
+          minWidth: 0,
           alignItems: "center",
           justifyContent: "center",
-          gap: 10,
-          padding: "10px 8px",
+          gap: compact ? 6 : 10,
+          padding: compact ? 8 : "10px 8px",
           borderRadius: 14,
           border: `1px solid ${theme.colors.panelBorder}`,
-          background: theme.colors.panelBg
+          background: theme.colors.panelBg,
         }}
       >
         {/* Bulk Damage toggle */}
         {props.onToggleBulkMode ? (
           <div style={{ position: "relative" }}>
             <HexButton
-              title={bulkMode ? translateUi("Bulk mode active - {{value1}} selected. Click to cancel.", { value1: bulkCount }) : translateUi("Bulk Damage - select multiple targets")}
+              compact={compact}
+              title={
+                bulkMode
+                  ? translateUi(
+                      "Bulk mode active - {{value1}} selected. Click to cancel.",
+                      { value1: bulkCount },
+                    )
+                  : translateUi("Bulk Damage - select multiple targets")
+              }
               disabled={false}
               onClick={props.onToggleBulkMode}
               variant="bulk"
             >
-              <div style={{ opacity: bulkMode ? 1 : 0.65, transition: "opacity 150ms" }}>
+              <div
+                style={{
+                  opacity: bulkMode ? 1 : 0.65,
+                  transition: "opacity 150ms",
+                }}
+              >
                 <IconBulkDamage size={22} title={translateUi("Bulk Damage")} />
               </div>
             </HexButton>
             {bulkMode && bulkCount > 0 && (
-              <div style={{
-                position: "absolute", top: 2, right: 2,
-                width: 16, height: 16, borderRadius: "50%",
-                background: theme.colors.red, color: theme.colors.text,
-                fontSize: "var(--fs-tiny)", fontWeight: 900, display: "grid", placeItems: "center",
-                pointerEvents: "none",
-              }}>
+              <div
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  right: 2,
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  background: theme.colors.red,
+                  color: theme.colors.text,
+                  fontSize: "var(--fs-tiny)",
+                  fontWeight: 900,
+                  display: "grid",
+                  placeItems: "center",
+                  pointerEvents: "none",
+                }}
+              >
                 {bulkCount}
               </div>
             )}
@@ -190,7 +244,18 @@ export function CombatDeltaControls(props: Props) {
         ) : null}
 
         <HexButton
-          title={bulkMode ? (bulkCount > 0 ? translateUi("Apply damage to {{value1}} selected", { value1: bulkCount }) : translateUi("Select combatants to update")) : (disabled ? tooltip : translateUi("Apply damage"))}
+          compact={compact}
+          title={
+            bulkMode
+              ? bulkCount > 0
+                ? translateUi("Apply damage to {{value1}} selected", {
+                    value1: bulkCount,
+                  })
+                : translateUi("Select combatants to update")
+              : disabled
+                ? tooltip
+                : translateUi("Apply damage")
+          }
           disabled={bulkMode ? bulkCount === 0 : disabled}
           onClick={() => {
             props.onApplyDamage();
@@ -201,17 +266,33 @@ export function CombatDeltaControls(props: Props) {
           <IconAttack size={22} title={translateUi("Damage")} />
         </HexButton>
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            minWidth: 0,
+            gridColumn: compact ? "1 / -1" : undefined,
+            gridRow: compact ? 1 : undefined,
+          }}
+        >
           <input
             ref={inputRef}
             data-allow-combat-nav="true"
             value={props.value}
             inputMode="text"
             placeholder="2d6+3, (8+4)/2, 4x5"
-            onChange={(e) => props.onChange(normalizeDeltaInput(e.target.value))}
+            onChange={(e) =>
+              props.onChange(normalizeDeltaInput(e.target.value))
+            }
             onKeyDown={(e) => {
               const k = String(e.key || "").toLowerCase();
-              const allowHotkey = !e.altKey && !e.ctrlKey && !e.metaKey && (k === "n" || k === "p");
+              const allowHotkey =
+                !e.altKey &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                (k === "n" || k === "p");
               if (!allowHotkey) e.stopPropagation();
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -229,20 +310,33 @@ export function CombatDeltaControls(props: Props) {
               }
             }}
             disabled={disabled}
-            title={disabled ? tooltip : translateUi("Enter dice/math: 2d6+3, (8+4)/2, 4x5, +10, -2")}
+            title={
+              disabled
+                ? tooltip
+                : translateUi("Enter dice/math: 2d6+3, (8+4)/2, 4x5, +10, -2")
+            }
             style={{
-              width: 140,
+              width: compact ? "100%" : 140,
+              minWidth: 0,
+              boxSizing: "border-box",
+              minHeight: 44,
               textAlign: "center",
-              padding: "10px 12px",
+              padding: compact ? "6px 8px" : "10px 12px",
               borderRadius: 12,
               border: `1px solid ${theme.colors.panelBorder}`,
               background: theme.colors.panelBg,
-              color: lastRoll !== null ? theme.colors.accentHighlight : theme.colors.text,
+              color:
+                lastRoll !== null
+                  ? theme.colors.accentHighlight
+                  : theme.colors.text,
               fontWeight: 900,
-              fontSize: "var(--fs-title)",
+              fontSize: compact ? "var(--fs-subtitle)" : "var(--fs-title)",
               outline: "none",
               transition: "color 200ms ease",
-              animation: lastRoll !== null ? "beholdenRollFlash 1.6s ease forwards" : "none",
+              animation:
+                lastRoll !== null
+                  ? "beholdenRollFlash 1.6s ease forwards"
+                  : "none",
             }}
           />
           {/* Inline roll button when a dice expression is typed */}
@@ -251,7 +345,13 @@ export function CombatDeltaControls(props: Props) {
               type="button"
               onClick={handleRollPreview}
               title={translateUi("Roll dice - preview result in field")}
-              style={{ all: "unset", cursor: "pointer", fontSize: "var(--fs-tiny)", color: theme.colors.accentPrimary, fontWeight: 700 }}
+              style={{
+                all: "unset",
+                cursor: "pointer",
+                fontSize: "var(--fs-tiny)",
+                color: theme.colors.accentPrimary,
+                fontWeight: 700,
+              }}
             >
               {translateUi("roll preview")}
             </button>
@@ -259,7 +359,16 @@ export function CombatDeltaControls(props: Props) {
         </div>
 
         <HexButton
-          title={bulkMode ? (bulkCount > 0 ? translateUi("Heal {{value1}} selected", { value1: bulkCount }) : translateUi("Select combatants to update")) : (disabled ? tooltip : translateUi("Apply heal"))}
+          compact={compact}
+          title={
+            bulkMode
+              ? bulkCount > 0
+                ? translateUi("Heal {{value1}} selected", { value1: bulkCount })
+                : translateUi("Select combatants to update")
+              : disabled
+                ? tooltip
+                : translateUi("Apply heal")
+          }
           disabled={bulkMode ? bulkCount === 0 : disabled}
           onClick={() => {
             props.onApplyHeal();
@@ -272,6 +381,7 @@ export function CombatDeltaControls(props: Props) {
 
         {hasConditions ? (
           <HexButton
+            compact={compact}
             title={disabled ? tooltip : translateUi("Conditions")}
             disabled={disabled}
             onClick={() => {

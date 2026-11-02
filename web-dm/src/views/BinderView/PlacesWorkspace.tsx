@@ -1,6 +1,7 @@
 import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { IconPlus, IconTargeted } from "@/icons";
 import { IconAntarctica, IconFlyingFlag, IconVillage } from "@/views/BinderView/binderIcons";
 import { EntityIcon } from "@/components/iconPicker";
@@ -29,10 +30,34 @@ function PlaceIcon({ row }: { row: PlaceRow }) {
   return row.icon ? <EntityIcon icon={row.icon} size={22}/> : <IconTargeted size={22}/>;
 }
 
+function PlaceCard(props: { row: PlaceRow; binderId: string; accent: string; onShowWithin: (id: string) => void }) {
+  const translateUi = useUiTranslation("dmUi");
+  const { row } = props;
+  return <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: "0 10px", padding: "8px 12px", borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+    <Link to={`/binder/${props.binderId}/${row.referenceType}/${row.id}`} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, minHeight: 44, color: theme.colors.text, textDecoration: "none" }}>
+      <span style={{ display: "grid", flexShrink: 0, color: props.accent }}><PlaceIcon row={row} /></span>
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+        <span style={{ display: "block", fontWeight: 750 }}>{row.name}</span>
+        <span style={{ display: "block", color: theme.colors.muted, fontSize: "var(--fs-small)" }}>{translateUi(LABELS[row.referenceType].singular)}</span>
+      </span>
+    </Link>
+    <span title={translateUi("Related")} style={{ alignSelf: "center", color: theme.colors.muted, fontSize: "var(--fs-small)", textAlign: "right" }}>
+      <span style={{ display: "block" }}>{translateUi("Related")}</span>{row.usageCount}
+    </span>
+    {row.parent ? <button type="button" onClick={() => props.onShowWithin(row.parent!.id)} title={`${translateUi("Within")}: ${row.parent.name}`} style={{ gridColumn: "1 / -1", minWidth: 0, minHeight: 44, padding: "6px 0", border: 0, background: "transparent", color: theme.colors.muted, font: "inherit", fontSize: "var(--fs-small)", textAlign: "left", overflowWrap: "anywhere", cursor: "pointer" }}>
+      {translateUi("Parent")}: <span style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{row.parent.name}</span>
+    </button> : null}
+  </div>;
+}
+
 export function PlacesWorkspace(props: { binderId: string; accent: string; canEdit: boolean; onRecordsChanged: () => Promise<void> }) {
   const translateMessage = useUiMessages("dmUi");
   const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
+  // Below this width the roughly 800px table plus sidebar, gaps and padding no longer fit.
+  const isCompact = useIsNarrow("(max-width: 1100px)");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
   const [rows, setRows] = useState<PlaceRow[]>([]);
   const stored = useMemo(() => {
     try { return JSON.parse(localStorage.getItem(`binder:${props.binderId}:places-filters`) ?? "null") as { query?: string; filters?: PlaceFilters } | null; }
@@ -93,24 +118,25 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
 
   return (
     <>
-      <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 8, flex: "1 1 520px", flexWrap: "wrap", alignItems: "end" }}>
+          <div style={{ display: "flex", gap: 8, flex: isCompact ? "1 1 100%" : "1 1 520px", minWidth: 0, flexWrap: "wrap", alignItems: "end" }}>
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={translateUi("Search places…")}
-              style={{ width: "min(360px,100%)" }}
+              style={{ width: isCompact ? "100%" : "min(360px,100%)", ...(isCompact ? { minHeight: 44 } : {}) }}
             />
 
           </div>
           {props.canEdit ? (
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, ...(isCompact ? { flexWrap: "wrap", maxWidth: "100%" } : {}) }}>
               <select
                 value={newType}
                 onChange={(event) => setNewType(event.target.value as PlaceType)}
                 style={{
                   minWidth: 170,
+                  ...(isCompact ? { maxWidth: "100%", minHeight: 44 } : {}),
                   padding: "9px 11px",
                   borderRadius: theme.radius.control,
                   border: `1px solid ${theme.colors.panelBorder}`,
@@ -133,7 +159,8 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
             </div>
           ) : null}
         </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        {isCompact ? <Button variant="ghost" aria-expanded={filtersOpen} aria-controls={filtersId} style={{ justifySelf: "start", minHeight: 44 }} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? translateUi("Hide filters") : translateUi("Filters")}</Button> : null}
+        <div id={filtersId} hidden={isCompact && !filtersOpen} style={{ display: isCompact && !filtersOpen ? "none" : "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           {PLACE_FILTER_FIELDS.map((key) => <SearchableMultiFilter key={key} label={translateUi(LABELS[key].singular)} width={key === "points-of-interest" ? 200 : 165} selected={filters[key]} options={filterChoices[key]} onAdd={(value) => addFilter(key, value)} />)}
           {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyPlaceFilters())}>{translateUi("Clear")}</Button> : null}
         </div>
@@ -143,13 +170,13 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
             const choice = filterChoices[key].find((item) => item.value === value);
             return <button key={`${key}:${value}`} type="button" aria-label={translateUi("Remove {{value1}} {{value2}} filter", { value1: label, value2: choice?.label ?? value })}
               onClick={() => setFilters((current) => reconcilePlaceFilters(rows, { ...current, [key]: current[key].filter((item) => item !== value) }))}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", border: `1px solid ${withAlpha(props.accent, 0.48)}`, borderRadius: 999, background: withAlpha(props.accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}>
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", ...(isCompact ? { minHeight: 44, maxWidth: "100%", overflowWrap: "anywhere" } : {}), border: `1px solid ${withAlpha(props.accent, 0.48)}`, borderRadius: 999, background: withAlpha(props.accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}>
               <span style={{ color: props.accent }}>{label}</span>{choice?.label ?? value}<span aria-hidden style={{ color: theme.colors.red, fontSize: 14, lineHeight: 1 }}>{"\u00d7"}</span>
             </button>;
           }))}
         </div> : null}
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-          <div
+          {!isCompact && <div
             style={{
               display: "grid",
               gridTemplateColumns: "minmax(240px,1.4fr) 170px minmax(220px,1fr) 110px",
@@ -165,13 +192,13 @@ export function PlacesWorkspace(props: { binderId: string; accent: string; canEd
             <span>{translateUi("Type")}</span>
             <span>{translateUi("Parent")}</span>
             <span>{translateUi("Related")}</span>
-          </div>
+          </div>}
           {loading ? (
             <div style={{ padding: 42, textAlign: "center", color: theme.colors.muted }}>{translateUi("Loading…")}</div>
           ) : error ? (
             <div style={{ padding: 42, textAlign: "center", color: theme.colors.red }}>{error}</div>
           ) : visible.length ? (
-            visible.map((row) => (
+            visible.map((row) => isCompact ? <PlaceCard key={row.id} row={row} binderId={props.binderId} accent={props.accent} onShowWithin={showWithin} /> : (
               <div
                 key={row.id}
                 role="link"

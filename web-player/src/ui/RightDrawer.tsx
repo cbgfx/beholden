@@ -2,6 +2,7 @@ import React from "react";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
 import { useUiTranslation } from "@beholden/shared/i18n";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
 export function RightDrawer({
   onClose,
@@ -19,6 +20,7 @@ export function RightDrawer({
   footer?: React.ReactNode;
 }) {
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   return (
     <>
       <div
@@ -44,13 +46,14 @@ export function RightDrawer({
             padding: "18px 20px 14px",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+            ...(phone ? { flexWrap: "wrap", overflowWrap: "anywhere" } : {}),
             flexShrink: 0,
           }}
         >
           <div style={{ minWidth: 0 }}>{title}</div>
           <Button variant="ghost" onClick={onClose} style={{ padding: "4px 10px", fontSize: "var(--fs-small)" }}>{t("Close")}</Button>
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px 20px" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: phone ? "contain" : undefined, WebkitOverflowScrolling: "touch", padding: "16px 20px" }}>
           {children}
         </div>
         {footer && (

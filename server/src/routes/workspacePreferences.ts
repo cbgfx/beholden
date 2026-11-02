@@ -1,3 +1,7 @@
+import {
+  COLUMN_ICON_PATTERN,
+  COLUMN_NAME_MAX_LENGTH,
+} from "@beholden/shared/domain/layoutColumns";
 import type { Express } from "express";
 import { z } from "zod";
 import { createHash } from "node:crypto";
@@ -32,13 +36,25 @@ const Preferences = z.object({
           .record(Id, Appearance)
           .refine((value) => Object.keys(value).length <= 80),
         appearance: Appearance,
+        columnHeaders: z
+          .array(
+            z.object({
+              name: z.string().trim().max(COLUMN_NAME_MAX_LENGTH).optional(),
+              icon: z.string().regex(COLUMN_ICON_PATTERN).optional(),
+            }),
+          )
+          .max(4)
+          .optional(),
       }),
     )
     .min(1)
     .max(12),
 });
-const PreferencesWrite = Preferences.extend({ expectedRevision: z.string().length(64).nullable() });
-const revisionOf = (json: string) => createHash("sha256").update(json).digest("hex");
+const PreferencesWrite = Preferences.extend({
+  expectedRevision: z.string().length(64).nullable(),
+});
+const revisionOf = (json: string) =>
+  createHash("sha256").update(json).digest("hex");
 
 export function registerWorkspacePreferences(
   app: Express,
@@ -58,19 +74,36 @@ export function registerWorkspacePreferences(
   });
   app.put("/api/me/workspaces/:workspace", requireAuth, (req, res) => {
     const workspace = Id.parse(req.params.workspace);
-    const { expectedRevision, ...preferences } = parseBody(PreferencesWrite, req);
+    const { expectedRevision, ...preferences } = parseBody(
+      PreferencesWrite,
+      req,
+    );
     const json = JSON.stringify(preferences);
-    const result = db.transaction(() => {
-      const current = db.prepare("SELECT data_json FROM user_workspace_preferences WHERE user_id = ? AND workspace = ?")
-        .get(req.user!.userId, workspace) as { data_json: string } | undefined;
-      const currentRevision = current ? revisionOf(current.data_json) : null;
-      if (currentRevision !== expectedRevision) return false;
-      db.prepare(
-        "INSERT INTO user_workspace_preferences (user_id, workspace, data_json) VALUES (?, ?, ?) ON CONFLICT(user_id, workspace) DO UPDATE SET data_json = excluded.data_json",
-      ).run(req.user!.userId, workspace, json);
-      return true;
-    }).immediate();
-    if (!result) return res.status(409).json({ ok: false, code: "stale-workspace", message: "Layout changed in another tab; reload and try again." });
+    const result = db
+      .transaction(() => {
+        const current = db
+          .prepare(
+            "SELECT data_json FROM user_workspace_preferences WHERE user_id = ? AND workspace = ?",
+          )
+          .get(req.user!.userId, workspace) as
+          | { data_json: string }
+          | undefined;
+        const currentRevision = current ? revisionOf(current.data_json) : null;
+        if (currentRevision !== expectedRevision) return false;
+        db.prepare(
+          "INSERT INTO user_workspace_preferences (user_id, workspace, data_json) VALUES (?, ?, ?) ON CONFLICT(user_id, workspace) DO UPDATE SET data_json = excluded.data_json",
+        ).run(req.user!.userId, workspace, json);
+        return true;
+      })
+      .immediate();
+    if (!result)
+      return res
+        .status(409)
+        .json({
+          ok: false,
+          code: "stale-workspace",
+          message: "Layout changed in another tab; reload and try again.",
+        });
     res.json({ ok: true, revision: revisionOf(json) });
   });
 }

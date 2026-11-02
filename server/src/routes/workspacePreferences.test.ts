@@ -23,11 +23,14 @@ test("workspace preferences are user-scoped and reject stale whole-layout saves"
       const chunks: Buffer[] = []; response.on("data", (chunk) => chunks.push(chunk)); response.on("end", () => resolve({ status: response.statusCode ?? 0, body: JSON.parse(Buffer.concat(chunks).toString()) }));
     }); request.on("error", reject); if (payload) request.write(payload); request.end();
   });
-  const layout = { activeId: "default", views: [{ id: "default", name: "Default", columns: [["players"]], colors: {}, appearance: {} }] };
+  const layout = { activeId: "default", views: [{ id: "default", name: "Default", columns: [["players"]], columnHeaders: [{ name: "Party", icon: "game-icons:sword" }], colors: {}, appearance: {} }] };
   try {
     const first = await call("u", "PUT", { ...layout, expectedRevision: null }); assert.equal(first.status, 200);
     assert.equal((await call("v", "GET")).body, null);
     const loaded = await call("u", "GET"); assert.equal(loaded.body.activeId, "default");
+    assert.deepEqual(loaded.body.views[0].columnHeaders, layout.views[0]!.columnHeaders);
+    const invalid = await call("u", "PUT", { ...layout, views: [{ ...layout.views[0], columnHeaders: [{ icon: "game-icons:bad/path" }] }], expectedRevision: loaded.body.revision });
+    assert.equal(invalid.status, 400);
     const saved = await call("u", "PUT", { ...layout, views: [{ ...layout.views[0], name: "Mine" }], expectedRevision: loaded.body.revision }); assert.equal(saved.status, 200);
     const stale = await call("u", "PUT", { ...layout, expectedRevision: loaded.body.revision }); assert.equal(stale.status, 409); assert.equal(stale.body.code, "stale-workspace");
   } finally { await new Promise<void>((resolve) => server.close(() => resolve())); db.close(); }

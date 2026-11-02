@@ -7,6 +7,8 @@ import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, useBinderListSort } from "@/components/BinderListTable";
 import { SearchableMultiFilter } from "@/components/SearchableSelect";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
+import { BinderCompactCard } from "./BinderCompactCard";
 
 const NONE = "__none__";
 type FilterKey = "className" | "race" | "status" | "campaign" | "player";
@@ -48,6 +50,8 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
   const translateMessage = useUiMessages("dmUi");
   const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
+  const compact = useIsNarrow("(max-width: 1100px)");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [players, setPlayers] = useState<MortalOptions["players"]>([]);
   const [mortals, setMortals] = useState<BinderMortal[]>([]);
   const initialState = useMemo(() => storedState(binderId), [binderId]);
@@ -135,9 +139,12 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
 
   return <div style={{ display: "grid", gap: 12 }}>
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={translateUi("Search players…")} style={{ width: 260 }} />
+      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={translateUi("Search players…")} style={{ width: compact ? "100%" : 260 }} />
+      {compact ? <Button variant="ghost" aria-expanded={filtersOpen} style={{ minHeight: 44 }} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? translateUi("Hide filters") : translateUi("Filters")}</Button> : null}
+      <div hidden={compact && !filtersOpen} style={{ display: compact && !filtersOpen ? "none" : "contents" }}>
       {(Object.keys(labels) as FilterKey[]).map((key) => <SearchableMultiFilter key={key} label={labels[key]} selected={filters[key]} options={choices[key]} onAdd={(value) => setFilters((current) => current[key].includes(value) ? current : { ...current, [key]: [...current[key], value] })} />)}
       {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyFilters())}>{translateUi("Clear")}</Button> : null}
+      </div>
     </div>
     {Object.entries(filters).some(([, values]) => values.length) ? <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
       {(Object.entries(filters) as Array<[FilterKey, string[]]>).flatMap(([key, values]) => values.map((value) => {
@@ -172,18 +179,23 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
       }))}
     </div> : null}
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto" }}>
-      <BinderListHeader
+      {!compact && <BinderListHeader
         columns={headers.map(({ label, key }) => ({ key, label, sortable: true }))}
         gridTemplateColumns={columns}
         accent={accent}
         sortKey={sortKey}
         sortDir={sortDir}
         onSort={(key) => toggleSort(key as SortKey)}
-      />
+      />}
       {loading ? <BinderListLoading />
         : error ? <BinderListError message={error} />
         : sorted.length ? sorted.map(({ mortal, player, age }) => {
           const dead = mortal.lifeStatus === "dead";
+          if (compact) return <BinderCompactCard key={mortal.id} title={mortal.name} onOpen={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} icon={<BinderRecordThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />} badge={<span style={{ color: dead ? theme.colors.red : theme.colors.green }}>{dead ? translateUi("Dead") : translateUi("Alive")}</span>}>
+            {[player?.className, mortal.race?.name, age != null ? `${translateUi("Age")}: ${age}` : null].filter(Boolean).join(" · ")}
+            <span style={{ display: "block" }}>{translateUi("Campaign")}: {player?.campaignNames.join(", ") || translateUi("None")}</span>
+            <span style={{ display: "block" }}>{translateUi("Player")}: {player?.playerName || translateUi("None")}</span>
+          </BinderCompactCard>;
           return (
             <button
               key={mortal.id}

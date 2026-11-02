@@ -1,0 +1,5 @@
+@container (max-width: 440px) {
+  .combat-order-top { flex-wrap: wrap; }
+  .combat-order-name { white-space: normal !important; overflow-wrap: anywhere; }
+  .combat-order-stats { flex-basis: 100% !important; flex-wrap: wrap; }
+}

@@ -1,6 +1,8 @@
+import type { ColumnHeader as SheetColumnHeader } from "@beholden/shared/domain/layoutColumns";
+
 // Canonical id/title registry for the character sheet's top-level movable
 // panels. Reused as both the CollapsiblePanel `storageKey` (collapse-state
-// persistence) and, later, the drag-and-drop layout id — keeping id and
+// persistence) and the drag-and-drop layout id — keeping id and
 // display name in exactly one place instead of scattered string literals.
 
 export const PANEL_IDS = {
@@ -27,7 +29,13 @@ export interface PanelColorSettings {
   background?: string;
   text?: string;
 }
-export const MOVABLE_PANEL_IDS = Object.values(PANEL_IDS).filter((id) => id !== PANEL_IDS.combatStats) as PanelId[];
+export const MOVABLE_PANEL_IDS = Object.values(PANEL_IDS).filter(
+  (id) => id !== PANEL_IDS.combatStats,
+) as PanelId[];
+export type {
+  ColumnIconId as SheetColumnIcon,
+  ColumnHeader as SheetColumnHeader,
+} from "@beholden/shared/domain/layoutColumns";
 
 export const PANEL_TITLES: Record<PanelId, string> = {
   [PANEL_IDS.abilitiesSaves]: "Abilities & Saves",
@@ -59,4 +67,5 @@ export interface SheetViewDef {
   /** One array of panel ids per column, index = order within that column. */
   layout: PanelId[][];
   panelColors?: Partial<Record<PanelId, PanelColorSettings>>;
+  columnHeaders?: SheetColumnHeader[];
 }

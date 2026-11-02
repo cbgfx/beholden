@@ -1,3 +1,4 @@
+import "./CombatOrderRow.css";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 // web/src/views/CombatView/panels/CombatOrderPanel/components/CombatOrderRow.tsx
 
@@ -162,7 +163,7 @@ export function CombatOrderRow(props: {
           bulkMode ? props.onToggleBulkSelect?.(c.id) : props.onSelectTarget(c.id);
         }
       }}
-      style={{ all: "unset", cursor: "pointer", display: "block" }}
+      style={{ all: "unset", cursor: "pointer", display: "block", containerType: "inline-size", minWidth: 0 }}
     >
       <div style={{
         borderRadius: 12, border: `1px solid ${bulkMode && props.isBulkSelected ? theme.colors.accentWarning : theme.colors.panelBorder}`,
@@ -174,7 +175,7 @@ export function CombatOrderRow(props: {
         background: bulkMode && props.isBulkSelected ? `${theme.colors.accentWarning}12` : rowBackground,
       }}>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+        <div className="combat-order-top" style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
           {bulkMode && !isWorld && (
             <div style={{
               flexShrink: 0, width: 18, height: 18, borderRadius: 4,
@@ -192,7 +193,7 @@ export function CombatOrderRow(props: {
 
           <div style={{ flex: "1 1 auto", minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
-              <span style={{
+              <span className="combat-order-name" style={{
                 fontWeight: 900, fontSize: "var(--fs-large)",
                 color: isDead ? theme.colors.muted : theme.colors.text,
                 textDecoration: isDead ? "line-through" : "none",
@@ -224,7 +225,7 @@ export function CombatOrderRow(props: {
           </div>
 
           {/* AC + HP — --fs-body for readability */}
-          {!isWorld && <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+          {!isWorld && <div className="combat-order-stats" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <span style={{ opacity: 0.5, fontSize: "var(--fs-small)" }}>🛡</span>
               <span style={{ fontWeight: 900, fontSize: "var(--fs-body)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>{ac}</span>

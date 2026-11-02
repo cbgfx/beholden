@@ -112,7 +112,7 @@ export function CombatRosterView() {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0, width: "100%" }}>
       <CombatRosterHeader
         backTo={campaignId ? `/campaign/${campaignId}` : "/"}
         title={

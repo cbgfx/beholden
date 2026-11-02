@@ -10,6 +10,7 @@ export function HeaderActionLink({
   borderRadius = 8,
   fontSize = "var(--fs-medium)",
   title,
+  style,
 }: {
   to: string;
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export function HeaderActionLink({
   borderRadius?: number;
   fontSize?: string;
   title?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <Link
@@ -31,6 +33,7 @@ export function HeaderActionLink({
         padding,
         borderRadius,
         transition: "background 0.15s",
+        ...style,
       }}
       onMouseEnter={(e) => { e.currentTarget.style.background = hoverBackground; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}

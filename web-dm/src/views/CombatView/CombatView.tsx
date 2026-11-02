@@ -84,7 +84,7 @@ export function CombatView() {
   );
 
   const [delta, setDelta] = React.useState<string>("");
-  const isNarrow = useIsNarrow();
+  const isNarrow = useIsNarrow("(max-width: 1024px)");
 
   const {
     bulkMode,
@@ -363,6 +363,7 @@ export function CombatView() {
         workspace="combat"
         allowLayoutEditing={false}
         fixedLayout
+        compact={isNarrow}
         header={
           <CombatHudBar
             isNarrow={isNarrow}

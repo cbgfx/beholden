@@ -108,16 +108,20 @@ function EmptyTable({ item, accent }: { item: NavItem; accent: string }) {
 
 function CampaignTable({ binderId, campaigns, accent }: { binderId: string; campaigns: Campaign[]; accent: string }) {
   const translateUi = useUiTranslation("dmUi");
+  const compact = useIsNarrow("(max-width: 1200px)");
   const columns = "minmax(280px, 1.5fr) minmax(180px, 1fr) minmax(130px, 0.7fr) minmax(220px, 1.15fr)";
   const sortedCampaigns = [...campaigns].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: withAlpha(accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
+      {!compact && <div style={{ display: "grid", gridTemplateColumns: columns, gap: 18, padding: "12px 15px", background: withAlpha(accent, 0.08), borderBottom: `1px solid ${theme.colors.panelBorder}` }}>
         {["Name", "Active", "Players", "Open Campaign"].map((column) => (
           <div key={translateUi(column)} style={{ color: theme.colors.text, fontSize: "var(--fs-subtitle)", fontWeight: 750 }}>{translateUi(column)}</div>
         ))}
-      </div>
-      {sortedCampaigns.length ? sortedCampaigns.map((campaign) => (
+      </div>}
+      {sortedCampaigns.length ? sortedCampaigns.map((campaign) => compact ? <Link key={campaign.id} to={`/binder/${binderId}/campaigns/${campaign.id}`} style={{ display: "grid", minHeight: 44, gap: 5, padding: "12px 14px", color: theme.colors.text, textDecoration: "none", borderBottom: `1px solid ${theme.colors.panelBorder}`, overflowWrap: "anywhere" }}>
+        <strong>{campaign.name}</strong>
+        <span style={{ color: campaign.isActive ? theme.colors.green : theme.colors.muted }}>{campaign.isActive ? translateUi("Active") : translateUi("Inactive")} · {translateUi("Players")}: {campaign.playerCount ?? 0}</span>
+      </Link> : (
         <Link
           key={campaign.id}
           to={`/binder/${binderId}/campaigns/${campaign.id}`}

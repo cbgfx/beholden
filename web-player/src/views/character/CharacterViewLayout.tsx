@@ -1,4 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 import {
@@ -11,6 +12,7 @@ import {
   type CharacterPanelRegistry,
 } from "@/views/character/CharacterViewColumns";
 import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelColorSettings, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
+import { CharacterColumnHeading, CharacterColumnTabs, useSheetColumnNavigation } from "./layout/CharacterColumnNavigation";
 import { DEFAULT_SHEET_VIEWS } from "@/views/character/layout/defaultSheetViews";
 import { CharacterSheetHeader } from "@/views/character/CharacterSheetHeader";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
@@ -40,11 +42,13 @@ const PROTECTED_VIEW_IDS = new Set(["play", "all"]);
 
 export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 1024px)");
   const {
     char, data, derived, ui, notes, runtime, hpActions, live,
     polymorphCondition, polymorphMonsterState, combatProps, handlePortraitSelected,
     handleRemoveExtraFeat,
   } = model;
+  const layoutEditMode = ui.layoutEditMode && !phone;
   const currentData = derived.currentCharacterData;
   const appearance = normalizeAppearance(ui.appearanceDraft);
   const exhaustionPenalty = getExhaustionD20Penalty(char.ruleset, currentData.exhaustion ?? 0);
@@ -70,6 +74,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
     onSave: (views) => notes.saveCharacterData({ sheetViews: views }),
   });
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const columnNavigation = useSheetColumnNavigation(`${char.id}:${activeView.id}`, activeView.columns, phone, scrollRef);
   const isProtectedView = PROTECTED_VIEW_IDS.has(activeView.id);
   const canDeleteActiveView = sheetViews.length > 1 && !isProtectedView;
   const canResetActiveView = DEFAULT_SHEET_VIEWS.some((view) => view.id === activeView.id);
@@ -424,13 +430,16 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
   };
 
   return (
+    <div style={{ height: "100%", minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
     <Wrap
+      scrollRef={scrollRef}
+      className="character-sheet"
       wide
       inCombat={inCombat}
-      minWidth={activeView.columns * 380}
+      minWidth={phone ? 0 : activeView.columns * 380}
       backgroundColor={appearance.backgroundColor}
       textColor={appearance.textColor}
-      style={appearanceCssVariables(appearance)}
+      style={{ ...appearanceCssVariables(appearance), ...(phone ? { flex: 1, minHeight: 0, height: "auto" } : {}) }}
       backgroundImage={backgroundPatternImage(appearance.backgroundPattern, derived.accentColor, appearance.backgroundIntensity)}
       backgroundSize={appearance.backgroundPattern === "grid" ? "44px 44px" : appearance.backgroundPattern === "stars" ? "130px 110px" : undefined}
     >
@@ -481,7 +490,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         activeViewId={activeView.id}
         onSelectView={selectView}
         onCreateView={handleCreateView}
-        layoutEditMode={ui.layoutEditMode}
+        layoutEditMode={layoutEditMode}
+        allowLayoutEditing={!phone}
         onToggleLayoutEditMode={() => ui.setLayoutEditMode((value) => !value)}
         activeBastion={live.activeBastion}
         xpEarned={derived.xpEarned}
@@ -494,7 +504,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         saveXp={runtime.saveXp}
       />
 
-      {ui.layoutEditMode && (
+      {layoutEditMode && (
         <CharacterLayoutEditorToolbar
           activeView={activeView}
           protectedView={isProtectedView}
@@ -526,7 +536,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             // legacy sheetView with bespoke per-view widths, but that couldn't
             // reflect Add/Remove Column at all (there was no CSS track for a
             // 5th column to render into).
-            gridTemplateColumns: `repeat(${activeView.columns}, minmax(340px, 1fr))`,
+            gridTemplateColumns: phone ? "minmax(0, 1fr)" : `repeat(${activeView.columns}, minmax(340px, 1fr))`,
             gap: 16,
             alignItems: "flex-start",
           }}
@@ -537,13 +547,15 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
             return (
               <div
                 key={columnIndex}
+                hidden={phone && columnIndex !== columnNavigation.active}
                 ref={drag.registerZone(zoneId)}
                 style={{
-                  display: "flex",
+                  display: phone && columnIndex !== columnNavigation.active ? "none" : "flex",
                   flexDirection: "column",
                   gap: 14,
-                  minHeight: ui.layoutEditMode ? 40 : undefined,
-                  ...(ui.layoutEditMode
+                  minWidth: 0,
+                  minHeight: layoutEditMode ? 40 : undefined,
+                  ...(layoutEditMode
                     ? {
                         padding: 8,
                         borderRadius: 12,
@@ -552,6 +564,8 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                     : null),
                 }}
               >
+                {(phone || layoutEditMode || activeView.columnHeaders?.[columnIndex]?.name || activeView.columnHeaders?.[columnIndex]?.icon) ? <CharacterColumnHeading view={activeView} index={columnIndex} editing={layoutEditMode} accent={derived.accentColor} onChange={(header) => persistActiveView((view) => ({ ...view, columnHeaders: Array.from({ length: view.columns }, (_, index) => index === columnIndex ? header : view.columnHeaders?.[index] ?? {}) }))} /> : null}
+                {phone && columnIndex > 0 && columnIds.length === 0 ? <div style={{ color: C.muted, padding: "12px 4px" }}>{translateUi("No panels in this column.")}</div> : null}
                 {columnIndex === 0 && (
                   <div style={panelStyle(PANEL_IDS.combatStats)}>
                     <PinnedVitalsBox
@@ -596,7 +610,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                 {columnIndex === 0 && showPinnedPolymorphForm && <PolymorphedFormPanel polymorphMonsterState={polymorphMonsterState} />}
                 {columnIds.map((id) => (
                   <Fragment key={id}>
-                    {ui.layoutEditMode ? (
+                    {layoutEditMode ? (
                       <PanelCard
                         id={id}
                         dragging={drag.dragId === id}
@@ -617,7 +631,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
           })}
         </div>
 
-        {ui.layoutEditMode && (
+        {layoutEditMode && (
           <div
             ref={drag.registerZone(SIDEBAR_ZONE_ID)}
             style={{
@@ -656,9 +670,11 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
         )}
       </div>
 
-      {drag.dragId && drag.pointerPos && <PanelDragGhost id={drag.dragId} x={drag.pointerPos.x} y={drag.pointerPos.y} />}
+      {!phone && drag.dragId && drag.pointerPos && <PanelDragGhost id={drag.dragId} x={drag.pointerPos.x} y={drag.pointerPos.y} />}
 
       <CharacterViewOverlays model={model} />
     </Wrap>
+    {phone ? <CharacterColumnTabs view={activeView} active={columnNavigation.active} onSelect={columnNavigation.select} accent={derived.accentColor} /> : null}
+    </div>
   );
 }

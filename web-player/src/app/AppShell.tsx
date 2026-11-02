@@ -1,6 +1,6 @@
 import React from "react";
 import { useUpdateCheck } from "@beholden/shared/ui/useUpdateCheck";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useMatch } from "react-router-dom";
 import { C, withAlpha } from "@/lib/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { IconDice } from "@/icons";
@@ -9,6 +9,8 @@ import { fetchMyCharacters } from "@/services/actorApi";
 import { useWsStatus } from "@/services/ws";
 import { StatusDot, FooterGrid, HeaderActionButton, HeaderActionLink, TopBarFrame, navLinkStyle } from "@beholden/shared/ui";
 import { useUiTranslation } from "@beholden/shared/i18n";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
+import { MobileHeaderMenu, mobileMenuItemStyle } from "@beholden/shared/ui/MobileHeaderMenu";
 
 const DiceCalculatorModal = React.lazy(() =>
   import("@/tools/DiceCalculatorModal").then((module) => ({ default: module.DiceCalculatorModal })),
@@ -88,6 +90,8 @@ function topbarToolButtonStyle(active = false, accent = C.accentHl, muted = C.mu
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useUiTranslation("playerUi");
+  const onCharacterSheet = Boolean(useMatch("/characters/:id"));
+  const isPhone = useIsNarrow("(max-width: 1024px)");
   const { user, logout } = useAuth();
   const meta = useServerMeta();
   const update = useUpdateCheck(api, __APP_VERSION__);
@@ -104,11 +108,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [diceOpen]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: isPhone ? "100dvh" : "100vh", background: C.bg, color: C.text, fontFamily: "system-ui, Segoe UI, Arial, sans-serif" }}>
       <TopBarFrame height="auto" padding="8px 16px" gap={0}>
+        {isPhone ? <MobileHeaderMenu text={C.text} background={C.bg} border={C.panelBorder} accent={C.accentHl}
+          brand={<Link to="/" style={{ display: "flex", alignItems: "center", gap: 9, color: C.text, textDecoration: "none" }}><img src={`${import.meta.env.BASE_URL}beholden_logo.png`} alt="" width={32} height={32} /><strong>Beholden</strong><span style={{ color: C.accentHl, fontSize: "var(--fs-small)" }}>{t("Player")}</span></Link>}
+          status={<StatusDot active={connected} activeColor={C.green} inactiveColor={C.red} title={connected ? t("Server connected") : t("Server disconnected")} />}>
+          {(close) => <>
+            <nav style={{ display: "grid", gap: 4 }}>
+              <NavLink to="/" end style={mobileMenuItemStyle}>{t("Home")}</NavLink>
+              {lastChar ? <NavLink to={`/characters/${lastChar.id}`} style={mobileMenuItemStyle}>{lastChar.name}</NavLink> : null}
+              <NavLink to="/compendium" style={mobileMenuItemStyle}>{t("Compendium")}</NavLink>
+              <Link to="/profile" style={mobileMenuItemStyle}>{user?.name || user?.username}</Link>
+            </nav>
+            <div style={{ borderTop: `1px solid ${C.panelBorder}`, marginTop: 12, paddingTop: 12 }}>
+              <button type="button" onClick={() => { setDiceOpen(true); close(); }} style={mobileMenuItemStyle}><IconDice size={22} />{t("Dice Calculator")}</button>
+            </div>
+            <button type="button" onClick={() => { close(); logout(); }} style={{ ...mobileMenuItemStyle, marginTop: 12, color: C.muted }}>{t("Sign out")}</button>
+          </>}
+        </MobileHeaderMenu> : (
         <div
           style={{
-            display: "grid",
+            display: isPhone ? "flex" : "grid",
+            flexWrap: isPhone ? "wrap" : undefined,
+            rowGap: isPhone ? 8 : undefined,
             gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
             alignItems: "center",
             columnGap: 10,
@@ -170,7 +192,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               title={t("Dice Calculator")}
               onPointerDown={(e) => { e.preventDefault(); setDiceOpen(true); }}
               onClick={() => setDiceOpen(true)}
-              style={topbarToolButtonStyle(diceOpen)}
+              style={{ ...topbarToolButtonStyle(diceOpen), ...(isPhone ? { width: 44, height: 44 } : {}) }}
             >
               <IconDice size={22} />
             </button>
@@ -180,6 +202,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div
             style={{
               justifySelf: "end",
+              width: isPhone ? "100%" : undefined,
+              minWidth: isPhone ? 0 : undefined,
+              flexWrap: isPhone ? "wrap" : undefined,
               display: "flex",
               alignItems: "center",
               gap: 10,
@@ -187,14 +212,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               fontSize: "var(--fs-medium)",
             }}
           >
-            <nav style={{ display: "flex", gap: 4 }}>
+            <nav style={{ display: "flex", gap: 4, ...(isPhone ? { flexWrap: "wrap", width: "100%", minWidth: 0 } : {}) }}>
               <NavLink to="/" end style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}>
                 {t("Home")}
               </NavLink>
               {lastChar && (
                 <NavLink
                   to={`/characters/${lastChar.id}`}
-                  style={({ isActive }) => navLinkStyle(isActive, C.accentHl, C.muted)}
+                  style={({ isActive }) => ({ ...navLinkStyle(isActive, C.accentHl, C.muted), ...(isPhone ? { maxWidth: "100%", overflowWrap: "anywhere", minHeight: 44 } : {}) })}
                 >
                   {lastChar.name}
                 </NavLink>
@@ -203,7 +228,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {t("Compendium")}
               </NavLink>
             </nav>
-            <HeaderActionLink to="/profile" color={C.muted}>
+            <HeaderActionLink to="/profile" color={C.muted} style={isPhone ? { maxWidth: "100%", overflowWrap: "anywhere", minHeight: 44 } : undefined}>
               {user?.name || user?.username}
             </HeaderActionLink>
             <HeaderActionButton onClick={logout} color={C.muted} borderColor={C.panelBorder}>
@@ -217,6 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           </div>
         </div>
+        )}
       </TopBarFrame>
       {diceEverOpened && (
         <React.Suspense fallback={null}>
@@ -228,7 +254,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <FooterGrid
+      {!(isPhone && onCharacterSheet) && <FooterGrid
+        mobileSummary={`© ${new Date().getFullYear()} Beholden`}
+        mobileVersion={`v${update.currentVersion}`}
         borderColor={C.panelBorder}
         background={withAlpha(C.panelBg, 0.12)}
         color={C.muted}
@@ -282,7 +310,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div>{t("v{{version}}", { version: update.currentVersion })}</div>
           </>
         }
-      />
+      />}
     </div>
   );
 }

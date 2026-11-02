@@ -1,3 +1,4 @@
+import "./PlayerRow.css";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { theme, withAlpha } from "@/theme/theme";
@@ -88,9 +89,10 @@ export function PlayerRow(props: {
 
   return (
     <div
-      className={variant === "campaign" ? "campaignInteractiveRow" : undefined}
+      className={`player-row ${variant === "campaign" ? "campaignInteractiveRow" : ""}`}
       style={{
         ...rowStyle,
+        containerType: "inline-size",
         minWidth: 0,
         maxWidth: "100%",
         boxSizing: "border-box",
@@ -113,10 +115,10 @@ export function PlayerRow(props: {
     >
 
       {/* Top row: avatar · name/meta · stats · actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      <div className="player-row-top" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
 
         {/* Avatar */}
-        <div style={{
+        <div className="player-row-avatar" style={{
           flex: "0 0 auto", width: 36, height: 36, borderRadius: 8,
           background: withAlpha(iconColor, 0.15),
           border: `1px solid ${withAlpha(iconColor, 0.35)}`,
@@ -130,7 +132,7 @@ export function PlayerRow(props: {
         </div>
 
         {/* Name + meta */}
-        <div title={`${p.characterName}${p.playerName ? ` (${p.playerName})` : ""}`} style={{ flex: "1 1 0", minWidth: 0 }}>
+        <div className="player-row-identity" title={`${p.characterName}${p.playerName ? ` (${p.playerName})` : ""}`} style={{ flex: "1 1 0", minWidth: 0 }}>
           <div style={{
             fontWeight: 900, fontSize: "var(--fs-large)",
             color: isDead ? theme.colors.muted : theme.colors.text,
@@ -153,7 +155,7 @@ export function PlayerRow(props: {
         </div>
 
         {/* AC + HP */}
-        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+        <div className="player-row-stats" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <IconShield size={12} style={{ opacity: 0.55, color: theme.colors.muted }} />
             <span style={{ fontWeight: 900, fontSize: "var(--fs-medium)", color: theme.colors.text, fontVariantNumeric: "tabular-nums" }}>
@@ -172,6 +174,7 @@ export function PlayerRow(props: {
         {/* Action area */}
         {(props.primaryAction != null || showMenu) && (
           <div
+            className="player-row-actions"
             style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
@@ -184,7 +187,7 @@ export function PlayerRow(props: {
       </div>
 
       {/* HP bar — full width, indented to align with name */}
-      <div style={{ paddingLeft: 46 }}>
+      <div className="player-row-health" style={{ paddingLeft: 46 }}>
         {showDeathSaves ? (
           <PlayerDeathSaves
             playerId={p.playerId}

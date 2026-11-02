@@ -10,6 +10,7 @@ export function QtyStepper(props: { value: number; onChange: (n: number) => void
       <IconButton
         title={translateUi("Decrease")}
         variant="ghost"
+        style={{ minWidth: 44, minHeight: 44 }}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -34,6 +35,7 @@ export function QtyStepper(props: { value: number; onChange: (n: number) => void
       <IconButton
         title={translateUi("Increase")}
         variant="ghost"
+        style={{ minWidth: 44, minHeight: 44 }}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

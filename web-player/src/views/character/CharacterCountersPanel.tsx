@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useEffect, useState } from "react";
 import { C } from "@/lib/theme";
 import type { CharacterCounter } from "@/views/character/CharacterSheetTypes";
@@ -46,6 +47,7 @@ export function CharacterCountersPanel(props: {
   onSave: (counters: CharacterCounter[]) => void | Promise<unknown>;
 }) {
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const [counters, update, persistence] = useQueuedPersistedState(props.counters, async (next) => props.onSave(next), props.revision);
   const saveCounter = (id: string, patch: Partial<CharacterCounter>) => {
     update((current) => current.map((counter) => counter.id === id ? { ...counter, ...patch } : counter));
@@ -75,7 +77,7 @@ export function CharacterCountersPanel(props: {
               className="character-counter-row"
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) auto auto auto auto",
+                gridTemplateColumns: phone ? "repeat(4, minmax(0, 1fr))" : "minmax(0, 1fr) auto auto auto auto",
                 alignItems: "center",
                 gap: 7,
                 padding: "7px 8px",
@@ -84,12 +86,12 @@ export function CharacterCountersPanel(props: {
                 background: "rgba(255,255,255,0.025)",
               }}
             >
-              <CounterTitle value={counter.title} onSave={(title) => saveCounter(counter.id, { title })} />
+              <div style={phone ? { gridColumn: "1 / -1" } : { display: "contents" }}><CounterTitle value={counter.title} onSave={(title) => saveCounter(counter.id, { title })} /></div>
               <button
                 type="button"
                 aria-label={t("Decrease {{title}}", { title: counter.title })}
                 onClick={() => saveCounter(counter.id, { numCount: counter.numCount - 1 })}
-                style={miniPillBtn(true)}
+                style={{ ...miniPillBtn(true), ...(phone ? { minWidth: 44, minHeight: 44 } : {}) }}
               >
                 −
               </button>
@@ -99,7 +101,9 @@ export function CharacterCountersPanel(props: {
                 value={counter.numCount}
                 onChange={(event) => saveCounter(counter.id, { numCount: Math.trunc(Number(event.target.value) || 0) })}
                 style={{
-                  width: 58,
+                  width: phone ? "100%" : 58,
+                  minWidth: 0,
+                  minHeight: phone ? 44 : undefined,
                   boxSizing: "border-box",
                   padding: "5px 4px",
                   borderRadius: 7,
@@ -116,7 +120,7 @@ export function CharacterCountersPanel(props: {
                 type="button"
                 aria-label={t("Increase {{title}}", { title: counter.title })}
                 onClick={() => saveCounter(counter.id, { numCount: counter.numCount + 1 })}
-                style={miniPillBtn(true)}
+                style={{ ...miniPillBtn(true), ...(phone ? { minWidth: 44, minHeight: 44 } : {}) }}
               >
                 +
               </button>
@@ -126,8 +130,8 @@ export function CharacterCountersPanel(props: {
                 title={t("Delete {{title}}", { title: counter.title })}
                 onClick={() => update((current) => current.filter((entry) => entry.id !== counter.id))}
                 style={{
-                  width: 24,
-                  height: 30,
+                  width: phone ? 44 : 24,
+                  height: phone ? 44 : 30,
                   padding: 0,
                   border: 0,
                   background: "transparent",

@@ -1,4 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useCallback, useEffect, useState, type UIEvent } from "react";
 import { C, withAlpha } from "@/lib/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
@@ -24,6 +25,7 @@ export function InventoryItemPickerModal(props: {
 }) {
   const translateUi = useUiTranslation("playerUi");
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const { isOpen, onClose } = props;
   const {
     q, setQ,
@@ -187,20 +189,20 @@ export function InventoryItemPickerModal(props: {
       <div
         style={{
           width: "min(980px, 100%)",
-          height: "min(680px, calc(100vh - 40px))",
+          height: phone ? "calc(100dvh - 40px)" : "min(680px, calc(100vh - 40px))",
           background: C.bg,
           border: `1px solid ${C.panelBorder}`,
           borderRadius: 16,
           boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
           display: "grid",
-          gridTemplateColumns: "minmax(320px, 380px) minmax(0, 1fr)",
+          gridTemplateColumns: phone ? "minmax(0, 1fr)" : "minmax(320px, 380px) minmax(0, 1fr)",
           gap: 12,
           padding: 12,
           overflow: "hidden",
         }}
       >
-        <div style={inventoryPickerColumnStyle}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ ...inventoryPickerColumnStyle, display: phone && selectedId ? "none" : "flex" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, ...(phone ? { flexWrap: "wrap" } : {}) }}>
             <div style={{ fontSize: "var(--fs-small)", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: C.colorGold }}>
               {t("Browse Items")}
             </div>
@@ -223,6 +225,7 @@ export function InventoryItemPickerModal(props: {
             >
               {createMode ? t("Browse") : t("Create New")}
             </button>
+            {phone ? <Button type="button" variant="ghost" onClick={props.onClose}>{t("Close")}</Button> : null}
           </div>
 
           <input
@@ -232,7 +235,7 @@ export function InventoryItemPickerModal(props: {
             style={{ ...inputStyle, flex: "0 0 auto", width: "100%" }}
           />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0,1fr)" : "1fr 1fr", gap: 8 }}>
             <Select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ width: "100%" }}>
               {rarityOptions.map((r) => (
                 <option key={r} value={r}>
@@ -277,7 +280,7 @@ export function InventoryItemPickerModal(props: {
                   : t("{{count}} / {{total}} items", { count: rows.length, total: totalCount })}
           </div>
 
-          <div ref={vl.scrollRef} onScroll={handleScroll} style={inventoryPickerListStyle}>
+          <div ref={vl.scrollRef} onScroll={handleScroll} style={{ ...inventoryPickerListStyle, ...(phone ? { minHeight: 0 } : {}) }}>
             <div style={{ height: padTop }} />
             {!busy && error ? <div style={{ padding: 12, color: C.red }}>{error}</div> : null}
             {!busy && !error && rows.length === 0 ? <div style={{ padding: 12, color: C.muted }}>{t("No items found.")}</div> : null}
@@ -310,8 +313,9 @@ export function InventoryItemPickerModal(props: {
           </div>
         </div>
 
-        <div style={inventoryPickerColumnStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ ...inventoryPickerColumnStyle, display: phone && !selectedId ? "none" : "flex", overflowWrap: phone ? "anywhere" : undefined }}>
+          {phone ? <Button variant="ghost" onClick={() => setSelectedId(null)}>{t("Back to list")}</Button> : null}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, ...(phone ? { flexWrap: "wrap" } : {}) }}>
             <div style={{ fontSize: "var(--fs-medium)", fontWeight: 800, color: C.text }}>{detail?.name ?? "Select an item"}</div>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

@@ -8,10 +8,16 @@ import { TopBar } from "@/layout/TopBar";
 import { api } from "@/services/api";
 import { FooterGrid, TopBarFrame } from "@beholden/shared/ui";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
+import { WorkspaceNavigationContext } from "./workspace/WorkspaceBottomBar";
 
 
 export function ShellLayout(props: { children: React.ReactNode }) {
   const translateUi = useUiTranslation("dmUi");
+  const isPhone = useIsNarrow("(max-width: 760px)");
+  const [navigationTarget, setNavigationTarget] = React.useState<HTMLDivElement | null>(null);
+  const [hasWorkspaceNavigation, setWorkspaceNavigation] = React.useState(false);
+  const navigationSlot = React.useMemo(() => ({ target: navigationTarget, setActive: setWorkspaceNavigation }), [navigationTarget]);
   const { state } = useStore();
   const { user } = useAuth();
 
@@ -35,10 +41,10 @@ export function ShellLayout(props: { children: React.ReactNode }) {
   const otherIps = ips.filter((ip) => ip !== primaryIp);
 
   return (
-    <div
+    <WorkspaceNavigationContext.Provider value={navigationSlot}><div
       style={{
         background: theme.colors.bg,
-        height: "100vh",
+        height: isPhone ? "100dvh" : "100vh",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -59,7 +65,10 @@ export function ShellLayout(props: { children: React.ReactNode }) {
         {props.children}
       </div>
 
-      <FooterGrid
+      <div ref={setNavigationTarget} style={{ flexShrink: 0 }} />
+      {!hasWorkspaceNavigation && <FooterGrid
+        mobileSummary={`© ${new Date().getFullYear()} Beholden`}
+        mobileVersion={`v${update.currentVersion}`}
         borderColor={theme.colors.panelBorder}
         background={withAlpha(theme.colors.panelBg, 0.12)}
         color={theme.colors.muted}
@@ -131,7 +140,7 @@ export function ShellLayout(props: { children: React.ReactNode }) {
             {!primaryIp && <div>v{update.currentVersion}</div>}
           </>
         }
-      />
-    </div>
+      />}
+    </div></WorkspaceNavigationContext.Provider>
   );
 }

@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useEffect, useMemo, useState } from "react";
 import { MarkdownRichText } from "@beholden/shared/ui";
 import { GameIcon } from "@/icons/GameIcon";
@@ -29,6 +30,7 @@ export function CharacterInfoDrawer(props: {
   onAbilityOverrideChange: (key: AbilKey, value: number | null) => void;
 }) {
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   type LinkedIdentity = { binderId: string; id: string; name: string; gender: string | null; age: number | null; backstory: string | null };
   const [biographyOpen, setBiographyOpen] = useState(false);
   const [biography, setBiography] = useState("");
@@ -112,7 +114,7 @@ export function CharacterInfoDrawer(props: {
         </div>
 
         <div
-          style={{ flex: 1, minHeight: 0, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}
+          style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: phone ? "contain" : undefined, WebkitOverflowScrolling: "touch", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}
         >
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -146,7 +148,7 @@ export function CharacterInfoDrawer(props: {
               </button>
             </div>
             {displayedIdentityFields.length > 0 ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
                 {displayedIdentityFields.map(([label, value]) => (
                   <div
                     key={label}
@@ -188,7 +190,7 @@ export function CharacterInfoDrawer(props: {
                 }}
               >
                 <strong style={{ color: C.text }}>{t("Linked Binder identity · {{name}}", { name: linked.name })}</strong>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "1fr 1fr", gap: 10 }}>
                   <label style={{ display: "grid", gap: 5, color: C.muted }}>
                     {t("Gender")}
                     <select
@@ -268,7 +270,7 @@ export function CharacterInfoDrawer(props: {
             >
               {t("Overrides")}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "repeat(3, minmax(0, 1fr))", gap: 12 }}>
               {props.editableOverrideFields.map((field) => (
                 <label key={field.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <span style={{ fontSize: "var(--fs-small)", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>{field.label}</span>
@@ -306,7 +308,7 @@ export function CharacterInfoDrawer(props: {
               <div style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 {t("Ability score override")}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                 {(
                   [
                     ["str", "STR"],

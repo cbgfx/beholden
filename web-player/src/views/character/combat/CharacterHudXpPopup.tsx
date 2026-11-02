@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
@@ -15,6 +16,7 @@ export function CharacterHudXpPopup(props: {
   accentColor: string;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const { xpEarned, xpNeeded, xpLevelStart, xpInput, xpPopupOpen, setXpInput, setXpPopupOpen, saveXp, accentColor } = props;
   const xpPopupRef = useRef<HTMLDivElement | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -66,15 +68,16 @@ export function CharacterHudXpPopup(props: {
       {xpPopupOpen && (
         <div
           style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            right: 0,
+            position: phone ? "fixed" : "absolute",
+            top: phone ? "max(12px, env(safe-area-inset-top))" : "calc(100% + 6px)",
+            right: phone ? 12 : 0,
             zIndex: 100,
             background: "#1e2030",
             border: "1px solid rgba(255,255,255,0.15)",
             borderRadius: 10,
             padding: "12px 14px",
-            minWidth: 200,
+            minWidth: phone ? 0 : 200,
+            ...(phone ? { left: 12, maxHeight: "calc(100dvh - 24px)", overflowY: "auto" as const } : {}),
             boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
             display: "flex",
             flexDirection: "column",
@@ -98,6 +101,7 @@ export function CharacterHudXpPopup(props: {
               }}
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: "6px 8px",
                 borderRadius: 6,
                 fontSize: "var(--fs-subtitle)",
@@ -144,6 +148,7 @@ export function CharacterHudXpPopup(props: {
           {saveError && (
             <div style={{ fontSize: "var(--fs-tiny)", color: "#ef4444", textAlign: "center" }}>{saveError}</div>
           )}
+          {phone ? <Button variant="ghost" onClick={() => setXpPopupOpen(false)}>{translateUi("Close")}</Button> : null}
         </div>
       )}
     </div>

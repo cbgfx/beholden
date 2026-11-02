@@ -143,12 +143,12 @@ export function CombatantDetailsPanel(props: Props) {
 
   return (
     <Panel
-      style={{ padding: "12px 14px" }}
+      style={{ padding: ctx.isNarrow ? "8px 10px" : "12px 14px", minWidth: 0 }}
       title={
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, width: "100%", minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-            <span style={{ fontSize: "var(--fs-title)", fontWeight: 900 }}>
-              {roleTitle ? <span style={{ color: `var(--dm-panel-accent, ${panelTitleColor})` }}>{roleTitle}: </span> : null}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, width: "100%", minWidth: 0, whiteSpace: "normal" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", minWidth: 0, width: "100%", gap: 6 }}>
+            <span style={{ fontSize: ctx.isNarrow ? "var(--fs-subtitle)" : "var(--fs-title)", fontWeight: 900, minWidth: 0, overflowWrap: "anywhere", whiteSpace: "normal" }}>
+              {roleTitle && !ctx.isNarrow ? <span style={{ color: `var(--dm-panel-accent, ${panelTitleColor})` }}>{roleTitle}: </span> : null}
               <span style={{ color: theme.colors.text }}>{titleMain}</span>
             </span>
             {selected ? (
@@ -172,16 +172,16 @@ export function CombatantDetailsPanel(props: Props) {
       }
       actions={
         !selected || isWorld ? null : (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <IconButton title={translateUi("Transform / Polymorph")} onClick={ctx.onOpenPolymorph}>
+          <div style={{ display: "flex", gap: ctx.isNarrow ? 4 : 8, alignItems: "center", flexWrap: "wrap" }}>
+            <IconButton style={ctx.isNarrow ? { minWidth: 44, minHeight: 44, padding: 6 } : undefined} title={translateUi("Transform / Polymorph")} onClick={ctx.onOpenPolymorph}>
               <IconWerewolf size={18} title={translateUi("Transform")} />
             </IconButton>
 
-            <IconButton title={translateUi("Conditions")} onClick={ctx.onOpenConditions}>
+            <IconButton style={ctx.isNarrow ? { minWidth: 44, minHeight: 44, padding: 6 } : undefined} title={translateUi("Conditions")} onClick={ctx.onOpenConditions}>
               <IconConditions size={18} title={translateUi("Conditions")} />
             </IconButton>
 
-            <IconButton title={translateUi("Overrides")} onClick={ctx.onOpenOverrides}>
+            <IconButton style={ctx.isNarrow ? { minWidth: 44, minHeight: 44, padding: 6 } : undefined} title={translateUi("Overrides")} onClick={ctx.onOpenOverrides}>
               <IconPencil size={18} title={translateUi("Overrides")} />
             </IconButton>
           </div>
@@ -191,7 +191,7 @@ export function CombatantDetailsPanel(props: Props) {
       {!selected ? (
         <div style={{ color: theme.colors.muted }}>{translateUi("Select a combatant.")}</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 0, gap: ctx.isNarrow ? 8 : 14 }}>
           {isWorld ? (
             <div style={{ display: "grid", gap: 10 }}>
               <div style={{ color: theme.colors.accentWarning, fontSize: "var(--fs-small)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -246,7 +246,7 @@ export function CombatantDetailsPanel(props: Props) {
             </div>
           ) : null}
 
-          {!isWorld && sheetStats ? <CharacterSheetPanel stats={sheetStats} compact={isMonster} /> : null}
+          {!isWorld && sheetStats ? <CharacterSheetPanel stats={sheetStats} compact={isMonster || ctx.isNarrow} condensed={ctx.isNarrow} /> : null}
 
           {isPlayer && (selected.hpCurrent ?? 1) <= 0 ? (
             <div

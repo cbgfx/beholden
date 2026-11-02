@@ -10,6 +10,7 @@ import { ListShell } from "../../ui/ListShell";
 import { useCompendiumHost, type Ruleset } from "./CompendiumHost";
 import { ACTIVE_ROW_BACKGROUND, BrowserTitle, COMPENDIUM_COLORS as C, CompendiumSelect, CompendiumTag, searchInputStyle } from "./compendiumStyle";
 import { entryPath, useCompendiumEntry } from "./useCompendiumEntry";
+import { BrowserFilters } from "./BrowserFilters";
 
 export type FeatCatalogRow = {
   id: string;
@@ -171,7 +172,7 @@ export function FeatBrowser(props: {
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
-      <input value={query} placeholder={translateUi("Search feats or prerequisites...")} onChange={(event) => setQuery(event.target.value)} style={searchInputStyle} />
+      <BrowserFilters><input value={query} placeholder={translateUi("Search feats or prerequisites...")} onChange={(event) => setQuery(event.target.value)} style={searchInputStyle} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
         <CompendiumSelect value={category} onChange={(event) => setCategory(event.target.value)} style={selectStyle} title={translateUi("Filter by category")}>
@@ -201,6 +202,7 @@ export function FeatBrowser(props: {
         {hasActiveFilters && <button type="button" onClick={clearFilters} style={pill(false)}>{translateUi("Clear")}</button>}
       </div>
 
+      </BrowserFilters>
       <ListShell borderColor={C.panelBorder}>
         {filtered.map((feat) => {
           const active = feat.id === props.selectedFeatId && (props.selectedFeatRuleset == null || feat.ruleset === props.selectedFeatRuleset);

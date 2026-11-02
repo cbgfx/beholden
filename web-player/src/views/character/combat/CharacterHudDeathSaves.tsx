@@ -1,4 +1,5 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { C } from "@/lib/theme";
 
 export function CharacterHudDeathSaves(props: {
@@ -9,6 +10,7 @@ export function CharacterHudDeathSaves(props: {
   saveDeathSaves: (next: { success: number; fail: number }) => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const { hpCurrent, deathSaves, dsSaving, saveDeathSaves } = props;
 
   if (props.isDead) return <div style={{ color: C.red, fontWeight: 800 }}>{translateUi("Dead")}</div>;
@@ -20,7 +22,7 @@ export function CharacterHudDeathSaves(props: {
         <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 900, color: C.red, textTransform: "uppercase", letterSpacing: "0.1em" }}>{translateUi("Death Saving Throws")}</span>
         {dsSaving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted }}>{translateUi("saving...")}</span>}
       </div>
-      <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: phone ? "wrap" : undefined }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
           <span style={{ fontSize: "var(--fs-tiny)", fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: "0.06em" }}>{translateUi("Success")}</span>
           <div style={{ display: "flex", gap: 6 }}>
@@ -31,6 +33,7 @@ export function CharacterHudDeathSaves(props: {
                   key={i}
                   type="button"
                   disabled={dsSaving}
+                  aria-label={`${translateUi("Success")} ${i + 1}`}
                   onClick={() => {
                     const cur = deathSaves?.success ?? 0;
                     const next = cur > i ? i : i + 1;
@@ -64,6 +67,7 @@ export function CharacterHudDeathSaves(props: {
                   key={i}
                   type="button"
                   disabled={dsSaving}
+                  aria-label={`${translateUi("Failure")} ${i + 1}`}
                   onClick={() => {
                     const cur = deathSaves?.fail ?? 0;
                     const next = cur > i ? i : i + 1;

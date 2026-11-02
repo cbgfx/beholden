@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import type React from "react";
 import { useState } from "react";
@@ -48,10 +49,11 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
   onQuantity: (q: number) => void;
 }) {
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const meta = item.type;
   return (
     <div className="character-inventory-row">
-      <CollectionRow
+      <CollectionRow stacked={phone}
         padding="4px 2px"
         main={(
           <button type="button" onClick={onOpen} style={{ width: "100%", minWidth: 0, background: "transparent", border: "1px solid transparent", borderRadius: 8, padding: "3px 8px", textAlign: "left", cursor: "pointer" }}>
@@ -64,7 +66,7 @@ export function PartyStashItemRow({ item, onOpen, onTake, onDelete, onQuantity }
           </button>
         )}
         trailing={(
-          <div onClick={(event) => event.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div onClick={(event) => event.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 4, ...(phone ? { flexWrap: "wrap", maxWidth: "100%" } : {}) }}>
             <QuantityStepper
               value={item.quantity}
               onDecrement={() => item.quantity > 1 && onQuantity(item.quantity - 1)}
@@ -106,6 +108,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
 }) {
   const translateUi = useUiTranslation("playerUi");
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const [ammoOpen, setAmmoOpen] = useState(false);
   const state = getEquipState(item);
   const isWeapon = isWeaponItem(item);
@@ -138,7 +141,7 @@ export function ItemRow({ item, accentColor, proficiencies, parsedFeatureEffects
 
   return (
     <div className="character-inventory-row">
-      <CollectionRow
+      <CollectionRow stacked={phone}
       main={(
         <button type="button" onClick={() => onToggleExpanded(item.id)} style={{ width: "100%", minWidth: 0, background: expanded ? "rgba(255,255,255,0.05)" : "transparent", border: expanded ? `1px solid ${accentColor}33` : "1px solid transparent", borderRadius: 8, padding: "3px 8px", textAlign: "left", cursor: "pointer" }}>
           <div style={{ fontSize: "var(--fs-medium)", color: C.text, fontWeight: equipped ? 600 : 400, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>

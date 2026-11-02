@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C, withAlpha } from "@/lib/theme";
 import type { PreparedSpellProgressionTable } from "@/types/preparedSpellProgression";
@@ -10,6 +11,7 @@ export function PreparedSpellProgressionBlock(props: {
   compact?: boolean;
 }) {
   const { tables, accentColor = C.accentHl, compact = false } = props;
+  const phone = useIsNarrow("(max-width: 760px)");
   const t = useUiTranslation("playerUi");
   if (!tables.length) return null;
 
@@ -23,6 +25,7 @@ export function PreparedSpellProgressionBlock(props: {
             border: `1px solid ${withAlpha(accentColor, 0.22)}`,
             background: withAlpha(accentColor, 0.06),
             overflow: "hidden",
+            overflowWrap: phone ? "anywhere" : undefined,
           }}
         >
           <div
@@ -36,7 +39,7 @@ export function PreparedSpellProgressionBlock(props: {
           >
             {table.label?.trim() || t("Prepared Spells")}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(82px, auto) minmax(0, 1fr)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "minmax(82px, auto) minmax(0, 1fr)" }}>
             <div
               style={{
                 padding: compact ? "6px 8px" : "7px 10px",
@@ -57,7 +60,7 @@ export function PreparedSpellProgressionBlock(props: {
               key={`${table.label ?? "default"}:${row.level}:${row.spells.join("|")}`}
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(82px, auto) minmax(0, 1fr)",
+                gridTemplateColumns: phone ? "minmax(0, 1fr)" : "minmax(82px, auto) minmax(0, 1fr)",
                 borderTop: `1px solid ${withAlpha(accentColor, 0.12)}`,
               }}
             >

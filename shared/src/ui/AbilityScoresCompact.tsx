@@ -84,7 +84,7 @@ export function AbilityScoresCompact({
   const cellGap = compact ? 6 : 8;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${minColumnWidth}px, 1fr))`, gap: columnGap }}>
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(min(${minColumnWidth}px, 100%), 1fr))`, gap: columnGap }}>
       {columns.map((keys, index) => (
         <div key={index} style={{ minWidth: 0, display: "grid", gap: rowGap }}>
           <div

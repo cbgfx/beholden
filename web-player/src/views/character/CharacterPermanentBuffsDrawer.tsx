@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import type React from "react";
 import { C } from "@/lib/theme";
 import { Button } from "@/ui/Button";
@@ -29,6 +30,7 @@ export function CharacterPermanentBuffsDrawer(props: {
   onSave: () => void | Promise<void>;
 }) {
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   if (!props.open) return null;
 
   const setNumeric = (key: "acBonus" | "hpMaxBonus", value: string) => {
@@ -60,13 +62,13 @@ export function CharacterPermanentBuffsDrawer(props: {
       footer={<div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}><Button variant="ghost" onClick={props.onClose}>{t("Cancel")}</Button><Button variant="primary" disabled={props.saving} onClick={() => void props.onSave()}>{props.saving ? t("Saving...") : t("Save buffs")}</Button></div>}
     >
       <p style={{ margin: "0 0 18px", color: C.muted, lineHeight: 1.5 }}>{t("These bonuses remain active after a long rest. Set a value to 0 or clear an ability to remove it.")}</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "1fr 1fr", gap: 12 }}>
         <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>{t("AC BONUS")}</span><input type="number" value={props.overridesDraft.acBonus} onChange={(event) => setNumeric("acBonus", event.target.value)} style={inputStyle} /></label>
         <label style={{ display: "grid", gap: 6 }}><span style={{ color: C.muted, fontSize: "var(--fs-small)", fontWeight: 800 }}>{t("MAX HP BONUS")}</span><input type="number" value={props.overridesDraft.hpMaxBonus} onChange={(event) => setNumeric("hpMaxBonus", event.target.value)} style={inputStyle} /></label>
       </div>
       <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ color: props.accentColor, fontSize: "var(--fs-small)", fontWeight: 900, letterSpacing: "0.08em", marginBottom: 12 }}>{t("ABILITY SCORE BONUSES")}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: phone ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
           {ABILITIES.map(([key, label]) => <label key={key} style={{ display: "grid", gap: 5 }}><span style={{ color: C.muted, fontSize: "var(--fs-tiny)", fontWeight: 800 }}>{label}</span><input type="number" placeholder="0" value={props.abilityOverridesDraft[key] ?? ""} onChange={(event) => setAbility(key, event.target.value)} style={inputStyle} /></label>)}
         </div>
       </div>

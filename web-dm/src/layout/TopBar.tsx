@@ -10,6 +10,7 @@ import { useIsNarrow } from "@/hooks/useIsNarrow";
 import { HeaderActionButton, HeaderActionLink, StatusDot, navLinkStyle } from "@beholden/shared/ui";
 import { ToolsBar } from "@/layout/ToolsBar";
 import { RulesetTag } from "@/ui/RulesetTag";
+import { MobileHeaderMenu, mobileMenuItemStyle } from "@beholden/shared/ui/MobileHeaderMenu";
 
 function useSaveStatus(): "idle" | "saving" | "saved" {
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -50,11 +51,31 @@ export function TopBar() {
   const { user, logout } = useAuth();
   const connected = useWsStatus();
   const saveStatus = useSaveStatus();
-  const isPhone = useIsNarrow("(max-width: 640px)");
+  const isPhone = useIsNarrow("(max-width: 1024px)");
+  const location = useLocation();
   const { campaigns, selectedCampaignId } = state;
   const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
   const selectedName = selectedCampaign?.name ?? "";
   const rootLayoutStyle = { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, width: "100%" };
+
+  if (isPhone) {
+    const itemStyle = (path: string) => ({ ...mobileMenuItemStyle, background: location.pathname === path ? withAlpha(theme.colors.colorGold, 0.12) : "transparent" });
+    return <MobileHeaderMenu text={theme.colors.text} background={theme.colors.bg} border={theme.colors.panelBorder} accent={theme.colors.colorGold}
+      brand={<Link to="/" style={{ display: "flex", alignItems: "center", gap: 9, color: theme.colors.text, textDecoration: "none" }}><img src="/beholden_logo.png" alt="" width={32} height={32} /><strong>Beholden</strong><span style={{ color: theme.colors.colorGold, fontWeight: 800 }}>{translateUi("DM")}</span></Link>}
+      status={<><StatusDot active={connected} activeColor={theme.colors.green} inactiveColor={theme.colors.red} title={connected ? translateUi("Server connected") : translateUi("Server disconnected")} />{saveStatus !== "idle" ? <span role="status" style={{ fontSize: "var(--fs-tiny)" }}>{saveStatus === "saving" ? translateUi("Saving…") : translateUi("Saved ✓")}</span> : null}</>}>
+      {(close) => <>
+        <nav style={{ display: "grid", gap: 4 }}>
+          <Link to="/" style={itemStyle("/")}>{translateUi("Home")}</Link>
+          {selectedCampaignId && selectedName ? <Link to={`/campaign/${selectedCampaignId}`} style={{ ...itemStyle(`/campaign/${selectedCampaignId}`), flexWrap: "wrap" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{selectedName}</span><RulesetTag ruleset={selectedCampaign?.ruleset ?? "5.5e"} /></Link> : null}
+          <Link to="/compendium" style={itemStyle("/compendium")}>{translateUi("Compendium")}</Link>
+          {user?.isAdmin ? <Link to="/admin" style={itemStyle("/admin")}>{translateUi("Admin")}</Link> : null}
+          {user ? <Link to="/profile" style={itemStyle("/profile")}>{translateUi("Account settings")} · {user.name}</Link> : null}
+        </nav>
+        <div style={{ borderTop: `1px solid ${theme.colors.panelBorder}`, marginTop: 12, paddingTop: 12 }}><ToolsBar compact onToolOpen={close} /></div>
+        {user ? <button type="button" onClick={() => { close(); logout(); }} style={{ ...mobileMenuItemStyle, marginTop: 12, color: theme.colors.muted }}>{translateUi("Sign out")}</button> : null}
+      </>}
+    </MobileHeaderMenu>;
+  }
 
   return (
     <div style={rootLayoutStyle}>

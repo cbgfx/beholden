@@ -1,6 +1,24 @@
 /* web-player app-specific styles */
 /* All tokens and base resets come from @beholden/shared via main.tsx */
 
+/* Touch sizing is confined to the character sheet on phones. These minimums
+   intentionally override small inline dimensions on icon, slot and roll controls. */
+@media (max-width: 760px) {
+  .character-sheet { overflow-wrap: anywhere; }
+  .character-sheet button,
+  .character-sheet select,
+  .character-sheet input:not([type]),
+  .character-sheet input[type="number"],
+  .character-sheet input[type="text"] {
+    min-height: 44px !important;
+  }
+  .character-sheet button { min-width: 44px !important; }
+  .character-sheet input, .character-sheet select { max-width: 100%; }
+  .character-sheet .character-row-action,
+  .character-sheet .counter-row-action,
+  .character-sheet .character-panel__actions { opacity: 1; }
+}
+
 .character-panel__actions {
   opacity: 0.62;
   transition: opacity 120ms ease;

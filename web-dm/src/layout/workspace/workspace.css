@@ -108,6 +108,41 @@
   border: 1px dashed rgba(160, 180, 220, 0.4);
   border-radius: 8px;
 }
+.dm-workspace.is-compact {
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: visible;
+  overflow-wrap: anywhere;
+}
+.dm-workspace.is-compact .dm-workspace-columns {
+  grid-template-columns: minmax(0, 1fr);
+}
+.dm-workspace-toolbar.is-editing {
+  border: 0;
+  background: transparent;
+}
+.dm-workspace-move-menu {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.dm-workspace-move-menu summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 4px 8px;
+}
+.dm-workspace-move-menu > div {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  display: grid;
+  min-width: 150px;
+  padding: 6px;
+  background: #182032;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 8px;
+}
 .dm-workspace-panel {
   min-width: 0;
 }

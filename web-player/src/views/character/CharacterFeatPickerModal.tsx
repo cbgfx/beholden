@@ -12,6 +12,7 @@ import type { AbilKey } from "@/views/character/CharacterSheetTypes";
 import { inputStyle } from "@/views/character/inventory/CharacterInventoryPanelHelpers";
 import { cancelBtnStyle } from "@/views/character/CharacterViewParts";
 import { Button } from "@/ui/Button";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
 type FeatRow = { id: string; name: string };
 type FeatDetail = { id: string; name: string; text?: string | null };
@@ -37,6 +38,8 @@ export function CharacterFeatPickerModal(props: {
 }) {
   const { isOpen, onClose } = props;
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
+  const [showDetails, setShowDetails] = useState(false);
   const [allFeats, setAllFeats] = useState<FeatRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -47,6 +50,7 @@ export function CharacterFeatPickerModal(props: {
   const detailCache = useRef<Record<string, FeatDetail>>({});
 
   useEffect(() => {
+    setShowDetails(false);
     setAllFeats([]);
     setSelectedId(null);
     setSelectedDetail(null);
@@ -75,6 +79,7 @@ export function CharacterFeatPickerModal(props: {
 
   useEffect(() => {
     if (!props.isOpen) {
+      setShowDetails(false);
       setQuery("");
       setSelectedId(null);
       setSelectedDetail(null);
@@ -143,7 +148,7 @@ export function CharacterFeatPickerModal(props: {
         role="dialog"
         aria-modal="true"
         aria-labelledby="feat-picker-title"
-        style={{ background: "#0f1823", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 20, width: "min(860px, 96vw)", maxHeight: "86vh", display: "flex", flexDirection: "column", gap: 12 }}
+        style={{ background: "#0f1823", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: phone ? 12 : 20, width: "min(860px, 96vw)", height: phone ? "calc(100dvh - 24px)" : undefined, maxHeight: phone ? "calc(100dvh - 24px)" : "86vh", display: "flex", flexDirection: "column", gap: 12 }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span id="feat-picker-title" style={{ fontWeight: 800, fontSize: "var(--fs-title)", color: C.text }}>{t("Add Feat")}</span>
@@ -157,8 +162,9 @@ export function CharacterFeatPickerModal(props: {
           style={{ ...inputStyle, width: "100%", boxSizing: "border-box" as const }}
         />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.15fr", gap: 14, overflow: "hidden", flex: 1, minHeight: 0 }}>
-          <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
+        {phone && showDetails ? <Button variant="ghost" onClick={() => setShowDetails(false)}>{t("Back to list")}</Button> : null}
+        <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0,1fr)" : "1fr 1.15fr", gap: 14, overflow: "hidden", flex: 1, minHeight: 0 }}>
+          <div style={{ overflowY: "auto", display: phone && showDetails ? "none" : "flex", flexDirection: "column", gap: 3 }}>
             {busy ? (
               <div style={{ color: C.muted, padding: "8px 2px" }}>{t("Loading...")}</div>
             ) : rows.length === 0 ? (
@@ -171,7 +177,7 @@ export function CharacterFeatPickerModal(props: {
                 <button
                   key={feat.id}
                   type="button"
-                  onClick={() => { if (!already) setSelectedId(feat.id); }}
+                  onClick={() => { if (!already) { setSelectedId(feat.id); setShowDetails(true); } }}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "8px 12px", borderRadius: 8, cursor: already ? "default" : "pointer",
@@ -189,7 +195,7 @@ export function CharacterFeatPickerModal(props: {
             })}
           </div>
 
-          <div style={{ overflowY: "auto", padding: "4px 2px 4px 14px", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: phone && !showDetails ? "none" : undefined, minWidth: 0, overflowWrap: phone ? "anywhere" : undefined, overflowY: "auto", padding: phone ? "4px 2px" : "4px 2px 4px 14px", borderLeft: phone ? undefined : "1px solid rgba(255,255,255,0.07)" }}>
             {detailBusy ? (
               <div style={{ color: C.muted, fontSize: "var(--fs-small)", padding: 4 }}>{t("Loading...")}</div>
             ) : selectedDetail ? (

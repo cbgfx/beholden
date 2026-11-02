@@ -39,7 +39,7 @@ export function MonsterFilters(props: {
   onClear: () => void;
 }) {
   const translateUi = useUiTranslation("sharedUi");
-  const selectStyle = { width: "100%" };
+  const selectStyle = { width: "100%", minWidth: 0 };
   return (
     <>
       <input value={props.compQ} onChange={(event) => props.onChangeCompQ(event.target.value)} placeholder={translateUi("Search monsters...")} style={searchInputStyle} />
@@ -75,9 +75,9 @@ export function MonsterFilters(props: {
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <input value={props.crMin} onChange={(event) => props.onChangeCrMin(event.target.value)} placeholder={translateUi("CR min (e.g. 3 or 1/4)")} style={smallInputStyle} />
-        <input value={props.crMax} onChange={(event) => props.onChangeCrMax(event.target.value)} placeholder={translateUi("CR max (e.g. 7)")} style={smallInputStyle} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 6 }}>
+        <input value={props.crMin} onChange={(event) => props.onChangeCrMin(event.target.value)} placeholder={translateUi("CR min (e.g. 3 or 1/4)")} style={{ ...smallInputStyle, minWidth: 0 }} />
+        <input value={props.crMax} onChange={(event) => props.onChangeCrMax(event.target.value)} placeholder={translateUi("CR max (e.g. 7)")} style={{ ...smallInputStyle, minWidth: 0 }} />
       </div>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>

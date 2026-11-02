@@ -1,4 +1,5 @@
 import { useWs } from "@/services/ws";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
@@ -70,6 +71,10 @@ export function PlayerBinderView() {
   const t = useUiTranslation("playerUi");
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const phone = useIsNarrow("(max-width: 760px)");
+  const compact = useIsNarrow("(max-width: 1100px)");
+  const [navOpen, setNavOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // Column/filter labels for mortal fields are looked up by key so the same
   // translated word is reused everywhere that field name is displayed
   // (table header, filter chip, filter dropdown).
@@ -99,6 +104,7 @@ export function PlayerBinderView() {
   const section = (searchParams.get("section") as "mortals" | "campaigns" | "deities" | "places" | null) ?? "mortals";
   const selectedId = searchParams.get("recordId");
   const setSection = (next: "mortals" | "campaigns" | "deities" | "places") => {
+    setNavOpen(false);
     setSearchParams((prev) => {
       const updated = new URLSearchParams(prev);
       updated.set("section", next);
@@ -197,7 +203,7 @@ export function PlayerBinderView() {
 
   return (
     <main style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", color: C.text }}>
-      <header style={{ flex: "0 0 auto", padding: "20px 30px", borderBottom: `1px solid ${accent}55`, display: "flex", alignItems: "center", gap: 14 }}>
+      <header style={{ flex: "0 0 auto", padding: phone ? "12px" : "20px 30px", borderBottom: `1px solid ${accent}55`, display: "flex", alignItems: "center", gap: 14, ...(phone ? { flexWrap: "wrap", overflowWrap: "anywhere" } : {}) }}>
         <IconBinder size={38} />
         <div>
           <h1 style={{ margin: 0, fontSize: "var(--fs-hero)" }}>{data.binder.name}</h1>
@@ -208,8 +214,9 @@ export function PlayerBinderView() {
           {t("Character Sheet")}
         </Button>
       </header>
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", overflow: "hidden" }}>
-        <aside style={{ minHeight: 0, overflowY: "auto", padding: 14, borderRight: "1px solid rgba(255,255,255,.08)" }}>
+      {phone ? <Button variant="ghost" aria-expanded={navOpen} style={{ minHeight: 44, flexShrink: 0 }} onClick={() => setNavOpen((open) => !open)}>{t("Binder sections")}</Button> : null}
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: phone ? "minmax(0,1fr)" : "260px minmax(0,1fr)", gridTemplateRows: phone && navOpen ? "minmax(0, 40%) minmax(0, 1fr)" : undefined, overflow: "hidden" }}>
+        <aside hidden={phone && !navOpen} style={{ display: phone && !navOpen ? "none" : undefined, minHeight: 0, overflowY: "auto", padding: 14, borderRight: "1px solid rgba(255,255,255,.08)" }}>
           <nav
             aria-label={t("Binder sections")}
             style={{ display: "grid", gap: 14, padding: 14, border: "1px solid rgba(255,255,255,.08)", borderRadius: 14, background: "rgba(255,255,255,.018)" }}
@@ -266,7 +273,7 @@ export function PlayerBinderView() {
             ))}
           </nav>
         </aside>
-        <section style={{ minWidth: 0, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", padding: "24px clamp(18px,3vw,38px) 60px" }}>
+        <section style={{ minWidth: 0, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", padding: phone ? "12px 10px 40px" : "24px clamp(18px,3vw,38px) 60px", ...(compact ? { overflowWrap: "anywhere" } : {}) }}>
           {section === "campaigns" ? (
             selectedCampaign ? (
               <>
@@ -351,7 +358,7 @@ export function PlayerBinderView() {
                 <article style={{ border: `1px solid ${accent}55`, borderRadius: 15, background: "rgba(255,255,255,.035)", overflow: "hidden" }}>
                   <div style={{ height: 4, background: accent }} />
                   <div style={{ padding: 24, display: "grid", gap: 26, maxWidth: 1240 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 18, ...(compact ? { flexWrap: "wrap" } : {}) }}>
                       {selectedPublicRecord.type === "deity" ? (
                         <div
                           style={{
@@ -471,7 +478,7 @@ export function PlayerBinderView() {
               </>
             ) : (
               <>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 14, ...(compact ? { flexWrap: "wrap" } : {}) }}>
                   <h2 style={{ margin: 0 }}>{section === "deities" ? t("Deities") : t("Places")}</h2>
                   <input
                     value={query}
@@ -480,8 +487,8 @@ export function PlayerBinderView() {
                       section === translateUi("deities") ? t("Search deities…") : t("Search places…")
                     }
                     style={{
-                      width: 360,
-                      maxWidth: "45%",
+                      width: compact ? "100%" : 360,
+                      maxWidth: compact ? "100%" : "45%",
                       padding: "9px 12px",
                       borderRadius: 9,
                       border: "1px solid rgba(255,255,255,.12)",
@@ -492,7 +499,7 @@ export function PlayerBinderView() {
                   />
                 </div>
                 <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 13, overflow: "hidden" }}>
-                  <div
+                  {!compact && <div
                     style={{
                       display: "grid",
                       gridTemplateColumns: section === "deities" ? "minmax(220px,1fr) minmax(300px,2fr) 150px" : "minmax(240px,1.2fr) 150px minmax(220px,1fr)",
@@ -506,7 +513,7 @@ export function PlayerBinderView() {
                     <span style={{ color: accent }}>{t("Name")} ▲</span>
                     <span>{section === "deities" ? t("Domains") : t("Type")}</span>
                     <span>{section === "deities" ? t("Rank") : t("Parent")}</span>
-                  </div>
+                  </div>}
                   {filteredPublicRecords.map((record) => (
                     <button
                       key={record.id}
@@ -516,7 +523,7 @@ export function PlayerBinderView() {
                         width: "100%",
                         display: "grid",
                         gridTemplateColumns:
-                          section === "deities" ? "minmax(220px,1fr) minmax(300px,2fr) 150px" : "minmax(240px,1.2fr) 150px minmax(220px,1fr)",
+                          compact ? "minmax(0,1fr)" : section === "deities" ? "minmax(220px,1fr) minmax(300px,2fr) 150px" : "minmax(240px,1.2fr) 150px minmax(220px,1fr)",
                         gap: 12,
                         alignItems: "center",
                         padding: "13px 15px",
@@ -543,7 +550,7 @@ export function PlayerBinderView() {
                             <PublicPlaceIcon record={record} />
                           </span>
                         )}
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
+                        <span style={compact ? { overflowWrap: "anywhere", minWidth: 0 } : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
                       </span>
                       <span style={{ color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {section === "deities"
@@ -593,7 +600,7 @@ export function PlayerBinderView() {
               <article style={{ border: `1px solid ${accent}55`, borderRadius: 15, background: "rgba(255,255,255,.035)", overflow: "hidden" }}>
                 <div style={{ height: 4, background: accent }} />
                 <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 1240 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, ...(compact ? { flexWrap: "wrap" } : {}) }}>
                     <button
                       type="button"
                       disabled={!portraitSrc(selected)}
@@ -627,7 +634,7 @@ export function PlayerBinderView() {
                     <h2 style={{ margin: 0, fontSize: "calc(var(--fs-hero) * .9)" }}>{selected.name}</h2>
                     {selected.id === data.linkedMortalId ? <Button onClick={() => navigate(`/characters/${id}/edit`)}>{t("Edit Character")}<CharacterRequirementsBadge characterId={id} /></Button> : null}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: compact ? "repeat(auto-fit, minmax(min(100%, 280px), 1fr))" : "repeat(auto-fit, minmax(280px, 1fr))", columnGap: 30, rowGap: 0 }}>
                     {[
                       [
                         t("Position"),
@@ -657,7 +664,7 @@ export function PlayerBinderView() {
                           padding: "8px 2px",
                           borderBottom: `1px solid ${accent}24`,
                           display: "grid",
-                          gridTemplateColumns: "105px minmax(0, 1fr)",
+                          gridTemplateColumns: phone ? "minmax(0, 1fr)" : "105px minmax(0, 1fr)",
                           alignItems: "center",
                           gap: 10,
                         }}
@@ -702,15 +709,15 @@ export function PlayerBinderView() {
             </>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 12, ...(compact ? { flexWrap: "wrap" } : {}) }}>
                 <h2 style={{ margin: 0, fontSize: "var(--fs-title)" }}>{t("Mortals")}</h2>
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={t("Search mortals…")}
                   style={{
-                    width: 300,
-                    maxWidth: "45%",
+                    width: compact ? "100%" : 300,
+                    maxWidth: compact ? "100%" : "45%",
                     padding: "9px 12px",
                     borderRadius: 9,
                     border: "1px solid rgba(255,255,255,.12)",
@@ -720,7 +727,8 @@ export function PlayerBinderView() {
                   }}
                 />
               </div>
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
+              {compact ? <Button variant="ghost" aria-expanded={filtersOpen} style={{ minHeight: 44, marginBottom: 8 }} onClick={() => setFiltersOpen((open) => !open)}>{t("Filters")}</Button> : null}
+              <div hidden={compact && !filtersOpen} style={{ display: compact && !filtersOpen ? "none" : "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
                 {(Object.keys(emptyFilters()) as Array<keyof MortalFilters>).map((key) => (
                   <SearchableMultiFilter
                     key={key}
@@ -772,8 +780,8 @@ export function PlayerBinderView() {
                 </div>
               ) : null}
               <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 13, overflowX: "auto" }}>
-                <div style={{ minWidth: 1160 }}>
-                  <BinderDataTableHeader
+                <div style={{ minWidth: compact ? 0 : 1160 }}>
+                  {!compact && <BinderDataTableHeader
                     gridTemplateColumns={MORTAL_COLUMNS}
                     accent={accent}
                     theme={{ text: C.text, muted: C.muted, border: "rgba(255,255,255,.09)" }}
@@ -795,8 +803,13 @@ export function PlayerBinderView() {
                       ).map(([key, label, icon]) => ({ key, label, icon, sortable: true })),
                       { key: "visibility", label: "" },
                     ]}
-                  />
+                  />}
                   {sorted.map((mortal) => {
+                    if (compact) return <button key={mortal.id} type="button" onClick={() => setSelectedId(mortal.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", alignItems: "center", gap: "6px 10px", width: "100%", minHeight: 44, padding: "10px 12px", border: 0, borderBottom: "1px solid rgba(255,255,255,.08)", color: C.text, background: "transparent", textAlign: "left", cursor: "pointer", font: "inherit" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}><BinderDataTableThumbnail imageUrl={mortal.imageUrl} resolveUrl={(url) => resolveAssetUrl(url) ?? url} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} /><strong style={{ minWidth: 0, overflowWrap: "anywhere" }}>{mortal.name}{mortal.id === data.linkedMortalId ? ` ${t("(You)")}` : ""}</strong></span>
+                      <StatusPill status={mortal.lifeStatus} />
+                      <span style={{ gridColumn: "1 / -1", color: C.muted, overflowWrap: "anywhere", fontSize: "var(--fs-small)" }}>{[mortal.position, mortal.organization, mortal.location, mortal.species].filter(Boolean).join(" · ")}</span>
+                    </button>;
                     const genderColor = mortal.gender === "female" ? "#f9a8d4" : mortal.gender === "male" ? "#7dd3fc" : null;
                     const cell = { color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
                     return (

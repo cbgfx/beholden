@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { CollapsiblePanel, ProfDot, Tooltip } from "@/views/character/CharacterViewParts";
@@ -37,7 +38,8 @@ export function SkillsPanel({
   fmtMod,
 }: SkillsPanelProps) {
   const translateUi = useUiTranslation("playerUi");
-  const skillColumns = 2;
+  const phone = useIsNarrow("(max-width: 760px)");
+  const skillColumns = phone ? 1 : 2;
   const skillsPerColumn = Math.ceil(ALL_SKILLS.length / skillColumns);
   const orderedSkillsForGrid = Array.from({ length: skillsPerColumn }).flatMap((_, rowIndex) => {
     const row: (typeof ALL_SKILLS)[number][] = [];
@@ -55,7 +57,7 @@ export function SkillsPanel({
       storageKey={PANEL_IDS.skills}
       summary={translateUi("{{count}} proficient", { count: new Set([...(prof?.skills ?? []), ...(prof?.expertise ?? [])].map((entry) => entry.name.toLowerCase())).size })}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: 18, rowGap: 2 }}>
+      <div style={{ display: "grid", gridTemplateColumns: phone ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", columnGap: 18, rowGap: 2 }}>
         {orderedSkillsForGrid.map(({ name, abil }) => {
           const tier = getSkillProficiencyTier(prof ?? undefined, name);
           const isProfSkill = tier >= 1;
@@ -76,6 +78,7 @@ export function SkillsPanel({
                 alignItems: "center",
                 gap: 6,
                 padding: "3px 4px",
+                minHeight: phone ? 44 : undefined,
                 borderRadius: 4,
                 minWidth: 0,
               }}

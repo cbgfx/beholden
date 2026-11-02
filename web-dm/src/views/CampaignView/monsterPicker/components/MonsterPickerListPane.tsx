@@ -4,6 +4,7 @@ import { EmptyState, ListShell } from "@beholden/shared/ui";
 import { theme } from "@/theme/theme";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import type { CompendiumMonsterRow, AttackOverridesByMonsterId } from "@/views/CampaignView/monsterPicker/types";
+import { BrowserFilters } from "@beholden/shared/views/compendium/BrowserFilters";
 import { MonsterFilters } from "@beholden/shared/views/compendium/MonsterFilters";
 import { LettersBar } from "@/views/CampaignView/monsterPicker/components/LettersBar";
 import { MonsterRow } from "@/views/CampaignView/monsterPicker/components/MonsterRow";
@@ -11,12 +12,12 @@ import type { SortMode } from "@/views/CampaignView/monsterPicker/types";
 import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
 
 /** A row whose window is still in flight: keeps the list the right height while it arrives. */
-function MonsterRowPlaceholder() {
+function MonsterRowPlaceholder({ compact }: { compact?: boolean }) {
   return (
     <div
       aria-hidden
       style={{
-        height: 86,
+        height: compact ? 150 : 86,
         marginBottom: 8,
         borderRadius: theme.radius.control,
         border: `1px solid ${theme.colors.panelBorder}`,
@@ -29,6 +30,7 @@ function MonsterRowPlaceholder() {
 
 export function MonsterPickerListPane(props: {
   isOpen: boolean;
+  compact?: boolean;
   compQ: string;
   onChangeCompQ: (q: string) => void;
   sortMode: SortMode;
@@ -74,7 +76,7 @@ export function MonsterPickerListPane(props: {
 }) {
   const translateUi = useUiTranslation("dmUi");
   // Row is 86px tall + 8px bottom gap in MonsterRow.
-  const ROW_HEIGHT = 94;
+  const ROW_HEIGHT = props.compact ? 158 : 94;
   const v = useVirtualList({ isEnabled: props.isOpen, rowHeight: ROW_HEIGHT, overscan: 6 });
   const onProvideScrollToIndex = props.onProvideScrollToIndex;
 
@@ -99,12 +101,13 @@ export function MonsterPickerListPane(props: {
     return (
       <div style={{ paddingTop: padTop, paddingBottom: padBottom }}>
         {items.map((m, offset) => {
-          if (!m) return <MonsterRowPlaceholder key={`pending-${start + offset}`} />;
+          if (!m) return <MonsterRowPlaceholder compact={props.compact} key={`pending-${start + offset}`} />;
           const qty = props.qtyById[m.id] ?? 1;
           const active = m.id === props.selectedMonsterId;
           return (
             <MonsterRow
               key={m.id}
+              compact={props.compact}
               row={m}
               active={active}
               qty={qty}
@@ -135,11 +138,13 @@ export function MonsterPickerListPane(props: {
         flexDirection: "column",
         gap: 5,
         borderRight: `1px solid ${theme.colors.panelBorder}`,
-        paddingRight: 14,
+        paddingRight: props.compact ? 0 : 14,
+        minWidth: 0,
+        flex: 1,
         minHeight: 0,
       }}
     >
-      <MonsterFilters
+      <BrowserFilters><MonsterFilters
         compQ={props.compQ}
         onChangeCompQ={props.onChangeCompQ}
         sortMode={props.sortMode}
@@ -161,7 +166,7 @@ export function MonsterPickerListPane(props: {
         rulesetFilter={props.rulesetFilter}
         onChangeRulesetFilter={props.onChangeRulesetFilter}
         showRulesetFilter={props.showRulesetFilter}
-      />
+      /></BrowserFilters>
 
       <ListShell
         style={{
@@ -170,7 +175,7 @@ export function MonsterPickerListPane(props: {
           flex: 1,
           minHeight: 0,
           overflow: "auto",
-          paddingRight: 22,
+          paddingRight: props.compact ? 0 : 22,
           position: "relative",
         }}
         ref={v.scrollRef}
@@ -188,7 +193,7 @@ export function MonsterPickerListPane(props: {
           <EmptyState textColor={theme.colors.muted}>{translateUi("No results.")}</EmptyState>
         ) : null}
 
-        <LettersBar letters={props.lettersInList} onJump={props.onJumpToLetter} />
+        {!props.compact && <LettersBar letters={props.lettersInList} onJump={props.onJumpToLetter} />}
       </ListShell>
     </div>
   );

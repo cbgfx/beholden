@@ -11,6 +11,7 @@ import { useCompendiumHost, useOnRevisionChange, type CompendiumEntryEditing, ty
 import { ACTIVE_ROW_BACKGROUND, BrowserTitle, COMPENDIUM_COLORS as C } from "./compendiumStyle";
 import { BrowserHeaderActions, EntryRowActions } from "./EntryRowActions";
 import { SpellFilterBar, useSpellListScroll } from "./SpellFilterBar";
+import { BrowserFilters } from "./BrowserFilters";
 
 // Spell ids repeat across rulesets, so a row is identified by id and ruleset together.
 const rowKey = (id: string, ruleset: Ruleset | null | undefined) => `${id}::${ruleset ?? ""}`;
@@ -88,7 +89,7 @@ export function SpellBrowser(props: {
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
-      <SpellFilterBar search={search} />
+      <BrowserFilters><SpellFilterBar search={search} /></BrowserFilters>
       {actionError && <div role="alert" style={{ color: C.red, padding: "4px 8px", fontSize: "var(--fs-small)" }}>{actionError}</div>}
       <ListShell ref={containerRef} onScroll={onScroll} borderColor={C.panelBorder}>
         {rows.map((row) => (

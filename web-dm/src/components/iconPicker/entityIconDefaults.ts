@@ -5,7 +5,7 @@
 // support — never hardcode a fallback icon anywhere else.
 
 import type { BinderReferenceType } from "@/services/binderReferenceApi";
-import { toGameIconId } from "./gameIconsCollection";
+import { toGameIconId } from "@beholden/shared/ui/gameIconsCollection";
 
 const DEFAULT_ENTITY_ICON_NAMES: Partial<Record<BinderReferenceType, string>> = {
   organizations: "castle",

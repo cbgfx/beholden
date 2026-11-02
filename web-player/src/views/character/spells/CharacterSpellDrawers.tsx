@@ -4,6 +4,7 @@ import { EmptyState, ListShell, SubsectionLabel, Tag } from "@beholden/shared/ui
 import { C } from "@/lib/theme";
 import { IconButton } from "@/ui/IconButton";
 import { RightDrawer } from "@/ui/RightDrawer";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import type { FetchedSpellDetail } from "@/views/character/spells/CharacterSpellShared";
 
 export { SpellDrawer } from "./CharacterSpellDrawer";
@@ -67,6 +68,7 @@ export function AddSpellDrawer({
   onClose: () => void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const query = spellSearch.trim();
   const removableEntries = React.useMemo(
     () =>
@@ -221,7 +223,7 @@ export function AddSpellDrawer({
                             cursor: disabled ? "default" : "pointer",
                             textAlign: "left",
                             display: "grid",
-                            gridTemplateColumns: "1fr auto",
+                            gridTemplateColumns: phone ? "minmax(0,1fr)" : "1fr auto",
                             gap: 10,
                             alignItems: "start",
                             opacity: disabled ? 0.72 : 1,

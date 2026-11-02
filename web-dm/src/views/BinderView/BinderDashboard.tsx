@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { fetchBinderDashboard, type BinderDashboard } from "@/services/binderApi";
 import { theme, withAlpha } from "@/theme/theme";
 import { useBinderResource } from "./useBinderResource";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
 const TYPE_LABELS: Record<string, string> = { mortal: "Mortals", deity: "Deities", organization: "Organizations", continent: "Continents", country: "Countries", location: "Locations", poi: "POIs", item: "Items", event: "Events", race: "Races", position: "Positions", domain: "Domains" };
 const SECTIONS: Record<string, string> = { mortal: "mortals", deity: "deities", organization: "organizations", continent: "continents", country: "countries", location: "locations", poi: "points-of-interest", item: "items", event: "events", race: "races", position: "positions", domain: "domains" };
@@ -13,11 +14,12 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 }
 function RecordLinks({ rows }: { rows: Array<{ id: string; name: string; type?: string; route: string }> }) {
   const translateUi = useUiTranslation("dmUi");
+  const compact = useIsNarrow("(max-width: 1100px)");
   return (
     <div style={{ display: "grid", gap: 7 }}>
       {rows.map((row) => (
         <Link key={row.id} to={row.route} style={{ display: "flex", justifyContent: "space-between", color: theme.colors.text, textDecoration: "none" }}>
-          <span>{row.name}</span>
+          <span style={compact ? { minWidth: 0, overflowWrap: "anywhere" } : undefined}>{row.name}</span>
           {row.type ? <span style={{ color: theme.colors.muted, textTransform: "capitalize" }}>{row.type}</span> : null}
         </Link>
       ))}
@@ -29,6 +31,7 @@ function RecordLinks({ rows }: { rows: Array<{ id: string; name: string; type?: 
 export function BinderDashboardView({ binderId, accent, canEdit }: { binderId: string; accent: string; canEdit: boolean }) {
   const translateUi = useUiTranslation("dmUi");
   const { data, error } = useBinderResource<BinderDashboard>(binderId, fetchBinderDashboard);
+  const compact = useIsNarrow("(max-width: 1100px)");
   if (error) return <div role="alert" style={{ color: theme.colors.red }}>{error}</div>;
   if (!data) return <div style={{ color: theme.colors.muted }}>{translateUi("Loading dashboard…")}</div>;
   return (
@@ -66,6 +69,7 @@ export function BinderDashboardView({ binderId, accent, canEdit }: { binderId: s
         </div>
       ) : null}
       <DmWorkspace
+        compact={compact}
         workspace="binder-dashboard"
         defaultColumns={2}
         panels={[

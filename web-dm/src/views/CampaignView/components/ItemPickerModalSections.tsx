@@ -2,12 +2,15 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
-import { IconButton } from "@/ui/IconButton";
-import { IconClose, IconPlus } from "@/icons";
+
+import { IconPlus } from "@/icons";
 import { Select } from "@/ui/Select";
 import { theme, withAlpha } from "@/theme/theme";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
-import type { CompendiumItemDetail, CompendiumItemRow } from "@/domain/types/compendium";
+import type {
+  CompendiumItemDetail,
+  CompendiumItemRow,
+} from "@/domain/types/compendium";
 import { itemModifierLabel } from "@beholden/shared/domain";
 import {
   MagicBadge,
@@ -19,21 +22,40 @@ import {
 } from "./ItemPickerModalParts";
 
 const DMG_TYPE_LABELS: Record<string, string> = {
-  S: "Slashing", P: "Piercing", B: "Bludgeoning",
-  F: "Fire", C: "Cold", L: "Lightning", A: "Acid",
-  N: "Necrotic", R: "Radiant", T: "Thunder",
-  PS: "Psychic", PO: "Poison", FO: "Force",
+  S: "Slashing",
+  P: "Piercing",
+  B: "Bludgeoning",
+  F: "Fire",
+  C: "Cold",
+  L: "Lightning",
+  A: "Acid",
+  N: "Necrotic",
+  R: "Radiant",
+  T: "Thunder",
+  PS: "Psychic",
+  PO: "Poison",
+  FO: "Force",
 };
 
 const PROPERTY_LABELS: Record<string, string> = {
-  "2H": "Two-Handed", F: "Finesse", L: "Light", T: "Thrown",
-  V: "Versatile", R: "Reach", H: "Heavy", A: "Ammunition",
-  LD: "Loading", S: "Special",
+  "2H": "Two-Handed",
+  F: "Finesse",
+  L: "Light",
+  T: "Thrown",
+  V: "Versatile",
+  R: "Reach",
+  H: "Heavy",
+  A: "Ammunition",
+  LD: "Loading",
+  S: "Special",
 };
 
 function formatItemText(text: CompendiumItemDetail["text"]): string {
   return Array.isArray(text)
-    ? text.map((entry) => String(entry ?? "").trim()).filter(Boolean).join("\n\n")
+    ? text
+        .map((entry) => String(entry ?? "").trim())
+        .filter(Boolean)
+        .join("\n\n")
     : String(text ?? "").trim();
 }
 
@@ -71,22 +93,48 @@ export function ItemPickerBrowsePanel(props: {
       actions={
         <button
           type="button"
-          title={props.createMode ? translateUi("Back to browse") : translateUi("Create new item")}
+          title={
+            props.createMode
+              ? translateUi("Back to browse")
+              : translateUi("Create new item")
+          }
           onClick={props.onToggleCreateMode}
           style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 28, height: 28, borderRadius: 8,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 28,
+            height: 28,
+            borderRadius: 8,
             border: `1px solid ${theme.colors.panelBorder}`,
-            background: props.createMode ? theme.colors.panelBg : theme.colors.accentPrimary,
-            color: props.createMode ? theme.colors.muted : theme.colors.textDark,
-            cursor: "pointer", fontSize: "var(--fs-title)", lineHeight: 1, fontWeight: 700,
+            background: props.createMode
+              ? theme.colors.panelBg
+              : theme.colors.accentPrimary,
+            color: props.createMode
+              ? theme.colors.muted
+              : theme.colors.textDark,
+            cursor: "pointer",
+            fontSize: "var(--fs-title)",
+            lineHeight: 1,
+            fontWeight: 700,
           }}
         >
           {props.createMode ? "x" : <IconPlus size={14} />}
         </button>
       }
-      style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}
-      bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, minHeight: 0 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        height: "100%",
+      }}
+      bodyStyle={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        minHeight: 0,
+      }}
     >
       <input
         value={props.q}
@@ -98,20 +146,47 @@ export function ItemPickerBrowsePanel(props: {
         style={searchStyle()}
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-        <Select value={props.rarity} onChange={(e) => props.onRarityChange(e.target.value)} style={{ width: "100%" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(120px, 100%), 1fr))",
+          gap: 8,
+        }}
+      >
+        <Select
+          value={props.rarity}
+          onChange={(e) => props.onRarityChange(e.target.value)}
+          style={{ width: "100%" }}
+        >
           <option value="">{translateUi("All Rarities")}</option>
           {props.rarityOptions.map((rarity) => (
-            <option key={rarity} value={rarity}>{titleCase(rarity)}</option>
+            <option key={rarity} value={rarity}>
+              {titleCase(rarity)}
+            </option>
           ))}
         </Select>
-        <Select value={props.type} onChange={(e) => props.onTypeChange(e.target.value)} style={{ width: "100%" }}>
+        <Select
+          value={props.type}
+          onChange={(e) => props.onTypeChange(e.target.value)}
+          style={{ width: "100%" }}
+        >
           <option value="">{translateUi("All Types")}</option>
           {props.typeOptions.map((type) => (
-            <option key={type} value={type}>{type}</option>
+            <option key={type} value={type}>
+              {type}
+            </option>
           ))}
         </Select>
-        <Select value={props.magicFilter} onChange={(e) => props.onMagicFilterChange(e.target.value as "" | "magic" | "nonmagic")} style={{ width: "100%" }}>
+        <Select
+          value={props.magicFilter}
+          onChange={(e) =>
+            props.onMagicFilterChange(
+              e.target.value as "" | "magic" | "nonmagic",
+            )
+          }
+          style={{ width: "100%" }}
+        >
           <option value="">{translateUi("Any magic")}</option>
           <option value="magic">{translateUi("Magic only")}</option>
           <option value="nonmagic">{translateUi("Non-magic")}</option>
@@ -122,15 +197,22 @@ export function ItemPickerBrowsePanel(props: {
         {props.loading
           ? translateUi("Loading...")
           : props.totalCount > 0
-            ? translateUi("{{value1}} of {{value2}}", { value1: props.filtered.length, value2: props.totalCount })
-            : translateUi("{{value1}} items", { value1: props.filtered.length })}
+            ? translateUi("{{value1}} of {{value2}}", {
+                value1: props.filtered.length,
+                value2: props.totalCount,
+              })
+            : translateUi("{{value1}} items", {
+                value1: props.filtered.length,
+              })}
       </div>
 
       <div
         ref={props.scrollRef}
         onScroll={props.onScroll}
         style={{
-          flex: 1, minHeight: 0, overflowY: "auto",
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
           border: `1px solid ${theme.colors.panelBorder}`,
           borderRadius: 10,
         }}
@@ -138,7 +220,9 @@ export function ItemPickerBrowsePanel(props: {
         <div style={{ height: props.padTop }} />
 
         {!props.loading && props.filtered.length === 0 && (
-          <div style={{ padding: 12, color: theme.colors.muted }}>{translateUi("No items found.")}</div>
+          <div style={{ padding: 12, color: theme.colors.muted }}>
+            {translateUi("No items found.")}
+          </div>
         )}
 
         {props.filtered.slice(props.start, props.end).map((row) => {
@@ -147,7 +231,9 @@ export function ItemPickerBrowsePanel(props: {
             row.rarity ? titleCase(row.rarity) : null,
             row.type ?? null,
             row.attunement ? "Attunement" : null,
-          ].filter(Boolean).join(" • ");
+          ]
+            .filter(Boolean)
+            .join(" • ");
 
           return (
             <div
@@ -160,7 +246,9 @@ export function ItemPickerBrowsePanel(props: {
                 justifyContent: "center",
                 padding: "0 12px",
                 borderBottom: `1px solid ${theme.colors.panelBorder}`,
-                background: isSelected ? withAlpha(theme.colors.accentHighlight, 0.15) : "transparent",
+                background: isSelected
+                  ? withAlpha(theme.colors.accentHighlight, 0.15)
+                  : "transparent",
                 cursor: "pointer",
                 color: theme.colors.text,
                 flexShrink: 0,
@@ -168,11 +256,30 @@ export function ItemPickerBrowsePanel(props: {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {row.rarity && <RarityDot rarity={row.rarity} />}
-                <span style={{ fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {row.name}
+                </span>
                 {row.magic && <MagicBadge />}
               </div>
               {subtitle && (
-                <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div
+                  style={{
+                    color: theme.colors.muted,
+                    fontSize: "var(--fs-small)",
+                    marginTop: 2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {subtitle}
                 </div>
               )}
@@ -188,6 +295,7 @@ export function ItemPickerBrowsePanel(props: {
 
 export function ItemPickerDetailPanel(props: {
   detail: CompendiumItemDetail | null;
+  compact?: boolean;
   qty: number;
   canAddCompendium: boolean;
   onClose: () => void;
@@ -195,58 +303,125 @@ export function ItemPickerDetailPanel(props: {
   onAddCompendium: () => void;
 }) {
   const translateUi = useUiTranslation("dmUi");
+  const actions = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          border: `1px solid ${theme.colors.panelBorder}`,
+          borderRadius: 8,
+          overflow: "hidden",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => props.onQtyChange(Math.max(1, props.qty - 1))}
+          style={{
+            width: 44,
+            height: 44,
+            border: "none",
+            background: "transparent",
+            color: theme.colors.text,
+            cursor: "pointer",
+            fontSize: "var(--fs-body)",
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
+          -
+        </button>
+        <input
+          type="number"
+          min={1}
+          value={props.qty}
+          onChange={(e) =>
+            props.onQtyChange(Math.max(1, parseInt(e.target.value) || 1))
+          }
+          style={
+            {
+              width: 48,
+              textAlign: "center",
+              fontSize: "var(--fs-medium)",
+              fontWeight: 700,
+              background: "transparent",
+              color: theme.colors.text,
+              border: "none",
+              outline: "none",
+              appearance: "textfield",
+              MozAppearance: "textfield",
+              WebkitAppearance: "none",
+            } as React.CSSProperties
+          }
+        />
+        <button
+          type="button"
+          onClick={() => props.onQtyChange(props.qty + 1)}
+          style={{
+            width: 44,
+            height: 44,
+            border: "none",
+            background: "transparent",
+            color: theme.colors.text,
+            cursor: "pointer",
+            fontSize: "var(--fs-body)",
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
+          +
+        </button>
+      </div>
+      <Button
+        onClick={props.onAddCompendium}
+        disabled={!props.canAddCompendium}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <IconPlus size={14} /> {translateUi("Add")}
+        </span>
+      </Button>
+    </div>
+  );
   return (
     <Panel
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 10,
+            whiteSpace: "normal",
+            overflowWrap: "anywhere",
+          }}
+        >
           <span>{props.detail?.name ?? "Select an item"}</span>
           <div style={{ flex: 1 }} />
-          <IconButton title={translateUi("Close")} variant="ghost" onClick={props.onClose}>
-            <IconClose />
-          </IconButton>
         </div>
       }
-      actions={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", border: `1px solid ${theme.colors.panelBorder}`, borderRadius: 8, overflow: "hidden" }}>
-            <button type="button" onClick={() => props.onQtyChange(Math.max(1, props.qty - 1))}
-              style={{ width: 28, height: 28, border: "none", background: "transparent", color: theme.colors.text, cursor: "pointer", fontSize: "var(--fs-body)", fontWeight: 700, flexShrink: 0 }}>-</button>
-            <input
-              type="number"
-              min={1}
-              value={props.qty}
-              onChange={(e) => props.onQtyChange(Math.max(1, parseInt(e.target.value) || 1))}
-              style={{
-                width: 48,
-                textAlign: "center",
-                fontSize: "var(--fs-medium)",
-                fontWeight: 700,
-                background: "transparent",
-                color: theme.colors.text,
-                border: "none",
-                outline: "none",
-                appearance: "textfield",
-                MozAppearance: "textfield",
-                WebkitAppearance: "none",
-              } as React.CSSProperties}
-            />
-            <button type="button" onClick={() => props.onQtyChange(props.qty + 1)}
-              style={{ width: 28, height: 28, border: "none", background: "transparent", color: theme.colors.text, cursor: "pointer", fontSize: "var(--fs-body)", fontWeight: 700, flexShrink: 0 }}>+</button>
-          </div>
-          <Button onClick={props.onAddCompendium} disabled={!props.canAddCompendium}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <IconPlus size={14} /> {translateUi("Add")}
-            </span>
-          </Button>
-        </div>
-      }
-      bodyStyle={{ display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}
+      actions={props.compact ? undefined : actions}
+      bodyStyle={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        minHeight: 0,
+      }}
     >
+      {props.compact ? actions : null}
       {props.detail ? (
         <ItemDetail detail={props.detail} />
       ) : (
         <div style={{ color: theme.colors.muted, lineHeight: 1.5 }}>
-          {translateUi("Select an item from the list on the left, or click")} <strong>{translateUi("Create New")}</strong> {translateUi("to add a custom item.")}
+          {translateUi("Select an item from the list on the left, or click")}{" "}
+          <strong>{translateUi("Create New")}</strong>{" "}
+          {translateUi("to add a custom item.")}
         </div>
       )}
     </Panel>
@@ -257,33 +432,114 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
   const translateUi = useUiTranslation("dmUi");
   const dmg1 = detail.dmg1 ?? null;
   const dmg2 = detail.dmg2 ?? null;
-  const dmgTypeLabel = DMG_TYPE_LABELS[detail.dmgType ?? ""] ?? detail.dmgType ?? null;
-  const propertyLabels = (detail.properties ?? []).map((property) => PROPERTY_LABELS[property] ?? property);
-  const hasStats = dmg1 || dmg2 || detail.weight != null || detail.value != null || detail.ac != null || propertyLabels.length > 0;
+  const dmgTypeLabel =
+    DMG_TYPE_LABELS[detail.dmgType ?? ""] ?? detail.dmgType ?? null;
+  const propertyLabels = (detail.properties ?? []).map(
+    (property) => PROPERTY_LABELS[property] ?? property,
+  );
+  const hasStats =
+    dmg1 ||
+    dmg2 ||
+    detail.weight != null ||
+    detail.value != null ||
+    detail.ac != null ||
+    propertyLabels.length > 0;
   const detailText = formatItemText(detail.text);
   const displayName = detail.name.replace(/\s*\[.*?\]\s*$/, "").trim();
 
   return (
     <>
       <div>
-        <div style={{ fontWeight: 900, fontSize: "var(--fs-title)", color: theme.colors.text }}>{displayName}</div>
-        {detail.type && <div style={{ fontSize: "var(--fs-subtitle)", color: theme.colors.muted, marginTop: 2 }}>{detail.type}</div>}
+        <div
+          style={{
+            fontWeight: 900,
+            fontSize: "var(--fs-title)",
+            color: theme.colors.text,
+          }}
+        >
+          {displayName}
+        </div>
+        {detail.type && (
+          <div
+            style={{
+              fontSize: "var(--fs-subtitle)",
+              color: theme.colors.muted,
+              marginTop: 2,
+            }}
+          >
+            {detail.type}
+          </div>
+        )}
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         {detail.magic && <MagicBadge />}
-        {detail.attunement && <Chip label={translateUi("Requires Attunement")} color={theme.colors.accentHighlight} />}
-        {detail.rarity && <Chip label={titleCase(detail.rarity)} color={rarityChipColor(detail.rarity)} />}
-        {(detail.modifiers ?? []).flatMap((modifier, index) => { const label = itemModifierLabel(modifier); return label ? [<Chip key={index} label={label} color={theme.colors.colorMagic} />] : []; })}
+        {detail.attunement && (
+          <Chip
+            label={translateUi("Requires Attunement")}
+            color={theme.colors.accentHighlight}
+          />
+        )}
+        {detail.rarity && (
+          <Chip
+            label={titleCase(detail.rarity)}
+            color={rarityChipColor(detail.rarity)}
+          />
+        )}
+        {(detail.modifiers ?? []).flatMap((modifier, index) => {
+          const label = itemModifierLabel(modifier);
+          return label
+            ? [
+                <Chip
+                  key={index}
+                  label={label}
+                  color={theme.colors.colorMagic}
+                />,
+              ]
+            : [];
+        })}
       </div>
       {hasStats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8 }}>
-          {detail.ac != null && <Stat label={translateUi("Armor Class")} value={String(detail.ac)} />}
-          {dmg1 && <Stat label={translateUi("One-Handed Damage")} value={dmg1} />}
-          {dmg2 && <Stat label={translateUi("Two-Handed Damage")} value={dmg2} />}
-          {dmgTypeLabel && <Stat label={translateUi("Damage Type")} value={dmgTypeLabel} />}
-          {detail.weight != null && <Stat label={translateUi("Weight")} value={`${detail.weight} lb`} />}
-          {detail.value != null && <Stat label={translateUi("Value")} value={`${detail.value} gp`} />}
-          {propertyLabels.length > 0 && <Stat label={translateUi("Properties")} value={propertyLabels.join(", ")} />}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+            gap: 8,
+          }}
+        >
+          {detail.ac != null && (
+            <Stat
+              label={translateUi("Armor Class")}
+              value={String(detail.ac)}
+            />
+          )}
+          {dmg1 && (
+            <Stat label={translateUi("One-Handed Damage")} value={dmg1} />
+          )}
+          {dmg2 && (
+            <Stat label={translateUi("Two-Handed Damage")} value={dmg2} />
+          )}
+          {dmgTypeLabel && (
+            <Stat label={translateUi("Damage Type")} value={dmgTypeLabel} />
+          )}
+          {detail.weight != null && (
+            <Stat label={translateUi("Weight")} value={`${detail.weight} lb`} />
+          )}
+          {detail.value != null && (
+            <Stat label={translateUi("Value")} value={`${detail.value} gp`} />
+          )}
+          {propertyLabels.length > 0 && (
+            <Stat
+              label={translateUi("Properties")}
+              value={propertyLabels.join(", ")}
+            />
+          )}
         </div>
       )}
       <div
@@ -300,7 +556,11 @@ function ItemDetail({ detail }: { detail: CompendiumItemDetail }) {
           color: theme.colors.text,
         }}
       >
-        {detailText || <span style={{ color: theme.colors.muted }}>{translateUi("No description.")}</span>}
+        {detailText || (
+          <span style={{ color: theme.colors.muted }}>
+            {translateUi("No description.")}
+          </span>
+        )}
       </div>
     </>
   );

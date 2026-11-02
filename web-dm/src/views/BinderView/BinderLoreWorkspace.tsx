@@ -15,6 +15,8 @@ import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
+import { BinderCompactCard } from "./BinderCompactCard";
 
 type CampaignOption = { id: string; name: string };
 type CompendiumOption = { id: string; itemId: string; ruleset: "5e" | "5.5e"; name: string };
@@ -22,7 +24,8 @@ type CompendiumOption = { id: string; itemId: string; ruleset: "5e" | "5.5e"; na
 const compendiumOptionId = (itemId: string, ruleset: string) => `${ruleset}:${itemId}`;
 
 function Field(props: { label: string; children: React.ReactNode }) {
-  return <label style={{ display: "grid", gridTemplateColumns: "145px minmax(0,1fr)", gap: 12, alignItems: "center" }}>
+  const compact = useIsNarrow("(max-width: 760px)");
+  return <label style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0,1fr)" : "145px minmax(0,1fr)", gap: 12, alignItems: "center" }}>
     <span style={{ color: theme.colors.muted, fontWeight: 750 }}>{props.label}</span>{props.children}
   </label>;
 }
@@ -157,6 +160,8 @@ export function BinderLoreWorkspace(props: {
 }) {
   const translateUi = useUiTranslation("dmUi");
   const navigate = useNavigate();
+  const compact = useIsNarrow("(max-width: 1100px)");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [items, setItems] = useState<BinderItem[]>([]);
   const [events, setEvents] = useState<BinderEvent[]>([]);
   const [records, setRecords] = useState<BinderRecordOption[]>([]);
@@ -211,7 +216,7 @@ export function BinderLoreWorkspace(props: {
     return <div style={{ display: "grid", gap: 15 }}>
       <button type="button" onClick={() => navigate(`/binder/${props.binderId}/${props.type}`)} style={{ width: "fit-content", border: 0, background: "transparent", color: theme.colors.muted, cursor: "pointer" }}>{translateUi("← All")} {props.type}</button>
       <article style={{ border: `1px solid ${theme.colors.panelBorder}`, borderTop: `4px solid ${props.accent}`, borderRadius: theme.radius.panel, background: theme.colors.panelBg, padding: 22, display: "grid", gap: 18 }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}><h2 style={{ margin: 0, fontSize: "var(--fs-hero)" }}>{"name" in selected ? selected.name : selected.title}</h2>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "start", ...(compact ? { flexWrap: "wrap", gap: 10, overflowWrap: "anywhere" } : {}) }}><h2 style={{ margin: 0, fontSize: "var(--fs-hero)", minWidth: 0 }}>{"name" in selected ? selected.name : selected.title}</h2>
           {props.canEdit ? <div style={{ display: "flex", gap: 8 }}><Button onClick={() => setEditor("edit")}>{translateUi("Edit")}</Button><Button variant="danger" onClick={async () => {
             if (props.type === "items") await deleteBinderItem(props.binderId, selected.id); else await deleteBinderEvent(props.binderId, selected.id);
             navigate(`/binder/${props.binderId}/${props.type}`); await reload(); await props.onRecordsChanged();
@@ -234,8 +239,10 @@ export function BinderLoreWorkspace(props: {
               value={timelineQuery}
               onChange={(event) => setTimelineQuery(event.target.value)}
               placeholder={translateUi("Filter timeline…")}
-              style={{ maxWidth: 300 }}
+              style={{ maxWidth: compact ? "100%" : 300 }}
             />
+            {compact ? <Button variant="ghost" aria-expanded={filtersOpen} style={{ minHeight: 44 }} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? translateUi("Hide filters") : translateUi("Filters")}</Button> : null}
+            <div hidden={compact && !filtersOpen} style={{ display: compact && !filtersOpen ? "none" : "contents" }}>
             <SearchableSelect value={timelineRecordId} onChange={setTimelineRecordId} options={records} placeholder={translateUi("All related records")} />
             <SearchableSelect value={timelineTag} onChange={setTimelineTag} options={timelineTags} placeholder={translateUi("All tags")} />
             <SearchableSelect
@@ -245,6 +252,7 @@ export function BinderLoreWorkspace(props: {
               placeholder={translateUi("All Campaigns")}
             />
             <SearchableSelect value={timelinePlaceId} onChange={setTimelinePlaceId} options={places} placeholder={translateUi("All places")} />
+            </div>
           </div>
         ) : (
           <span />
@@ -256,7 +264,7 @@ export function BinderLoreWorkspace(props: {
         ) : null}
       </div>
       {props.type === "events" ? (
-        <div style={{ display: "grid", gap: 0, borderLeft: `2px solid ${withAlpha(props.accent, 0.45)}`, marginLeft: 72 }}>
+        <div style={{ display: "grid", gap: 0, minWidth: 0, borderLeft: `2px solid ${withAlpha(props.accent, 0.45)}`, marginLeft: compact ? 0 : 72 }}>
           {timelineEvents.map((event) => (
             <button
               key={event.id}
@@ -265,7 +273,9 @@ export function BinderLoreWorkspace(props: {
               style={{
                 position: "relative",
                 display: "grid",
-                gridTemplateColumns: "110px minmax(0,1fr)",
+                gridTemplateColumns: compact ? "minmax(0,1fr)" : "110px minmax(0,1fr)",
+                overflowWrap: "anywhere",
+                minWidth: 0,
                 gap: 14,
                 margin: "0 0 12px 20px",
                 padding: 14,
@@ -305,7 +315,7 @@ export function BinderLoreWorkspace(props: {
         </div>
       ) : (
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-          <div
+          {!compact && <div
             style={{
               display: "grid",
               gridTemplateColumns: columns,
@@ -319,7 +329,7 @@ export function BinderLoreWorkspace(props: {
             {headers.map((header) => (
               <strong key={header}>{header}</strong>
             ))}
-          </div>
+          </div>}
           {list.map((row) => {
             const item = row as BinderItem;
             const event = row as BinderEvent;
@@ -332,6 +342,9 @@ export function BinderLoreWorkspace(props: {
                     event.records.map((entry) => entry.name).join(", ") || "None",
                     event.campaigns.map((entry) => entry.name).join(", ") || "None",
                   ];
+            if (compact) return <BinderCompactCard key={row.id} title={cells[0]} onOpen={() => navigate(`/binder/${props.binderId}/${props.type}/${row.id}`)}>
+              {cells.slice(1).map((cell, index) => <span key={index} style={{ display: "block" }}>{translateUi(headers[index + 1]!)}: {cell}</span>)}
+            </BinderCompactCard>;
             return (
               <button
                 key={row.id}

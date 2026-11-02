@@ -1,5 +1,7 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
+import { mobileMenuItemStyle } from "@beholden/shared/ui/MobileHeaderMenu";
 import { useMatch } from "react-router-dom";
 import { theme } from "@/theme/theme";
 import { IconNameGenerator, IconDice, IconDeckOfManyThings, IconBastions } from "@/icons";
@@ -27,7 +29,7 @@ const TOOLS: { id: ToolId; label: string; Icon: React.ComponentType<{ size?: num
   { id: "bastions",      label: "Bastions",            Icon: IconBastions },
 ];
 
-export function ToolsBar() {
+export function ToolsBar({ compact = false, onToolOpen }: { compact?: boolean; onToolOpen?: () => void } = {}) {
   const translateUi = useUiTranslation("dmUi");
   const [open, setOpen] = useState<ToolId | null>(null);
   // Once a tool has been opened, keep its component mounted (never unmount it again) so its
@@ -55,22 +57,33 @@ export function ToolsBar() {
 
   function toggle(id: ToolId) {
     setOpen((prev) => (prev === id ? null : id));
+    onToolOpen?.();
   }
+
+  const modals = (
+    <React.Suspense fallback={null}>
+        {everOpened.has("nameGenerator") && <NameGeneratorModal isOpen={open === "nameGenerator"} onClose={() => setOpen(null)} />}
+        {everOpened.has("diceCalc") && <DiceCalculatorModal isOpen={open === "diceCalc"} onClose={() => setOpen(null)} />}
+        {everOpened.has("deck") && <DeckOfManyThingsModal isOpen={open === "deck"} onClose={() => setOpen(null)} />}
+        {everOpened.has("bastions") && <BastionsModal isOpen={open === "bastions"} onClose={() => setOpen(null)} />}
+      </React.Suspense>
+  );
 
   return (
     <>
       <div
         style={{
-          display: "flex",
+          display: compact ? "grid" : "flex",
           alignItems: "center",
           gap: 2,
-          padding: "0 8px",
-          borderLeft: `1px solid ${theme.colors.panelBorder}`,
-          borderRight: `1px solid ${theme.colors.panelBorder}`,
+          padding: compact ? 0 : "0 8px",
+          borderLeft: compact ? undefined : `1px solid ${theme.colors.panelBorder}`,
+          borderRight: compact ? undefined : `1px solid ${theme.colors.panelBorder}`,
         }}
       >
         {visibleTools.map(({ id, label, Icon }) => {
           const active = open === id;
+          if (compact) return <button key={id} type="button" onClick={() => toggle(id)} style={{ ...mobileMenuItemStyle, color: theme.colors.text }}><Icon size={22} /><span>{translateUi(label)}</span></button>;
           return (
             <IconButton
               key={id}
@@ -84,12 +97,7 @@ export function ToolsBar() {
         })}
       </div>
 
-      <React.Suspense fallback={null}>
-        {everOpened.has("nameGenerator") && <NameGeneratorModal isOpen={open === "nameGenerator"} onClose={() => setOpen(null)} />}
-        {everOpened.has("diceCalc") && <DiceCalculatorModal isOpen={open === "diceCalc"} onClose={() => setOpen(null)} />}
-        {everOpened.has("deck") && <DeckOfManyThingsModal isOpen={open === "deck"} onClose={() => setOpen(null)} />}
-        {everOpened.has("bastions") && <BastionsModal isOpen={open === "bastions"} onClose={() => setOpen(null)} />}
-      </React.Suspense>
+      {compact ? createPortal(modals, document.body) : modals}
     </>
   );
 }

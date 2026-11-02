@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { theme } from "@/theme/theme";
 import { Panel } from "@/ui/Panel";
 import { Button } from "@/ui/Button";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { IconEncounterRoster } from "@/icons";
 
 type Props = {
@@ -38,6 +39,7 @@ type Props = {
 export function CombatRosterHeader(props: Props) {
   const translateUi = useUiTranslation("dmUi");
   const nav = useNavigate();
+  const compact = useIsNarrow("(max-width: 1024px)");
 
   const xp = typeof props.totalXp === "number" && Number.isFinite(props.totalXp) ? Math.max(0, Math.round(props.totalXp)) : null;
   const diff = props.difficulty;
@@ -51,12 +53,12 @@ export function CombatRosterHeader(props: Props) {
   return (
     <Panel
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", minWidth: 0, width: "100%", whiteSpace: "normal", gap: compact ? 8 : 12 }}>
           <Button variant="ghost" onClick={() => nav(props.backTo)} title={translateUi("Back to Campaign")}>
             {translateUi("← Back")}
           </Button>
           <IconEncounterRoster size={18} title={translateUi("Combat Roster")} />
-          <span style={{ fontSize: "var(--fs-title)", fontWeight: 900, color: theme.colors.text }}>
+          <span style={{ fontSize: compact ? "var(--fs-subtitle)" : "var(--fs-title)", fontWeight: 900, color: theme.colors.text, minWidth: 0, flex: compact ? "1 1 100%" : "1 1 auto", overflowWrap: "anywhere", whiteSpace: "normal" }}>
             {props.title}
           </span>
           {xp != null ? (

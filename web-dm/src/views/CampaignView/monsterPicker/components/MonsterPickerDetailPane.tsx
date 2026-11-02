@@ -16,6 +16,7 @@ function cleanDetail(detail: string): string {
 
 export function MonsterPickerDetailPane(props: {
   selectedMonsterId: string | null;
+  compact?: boolean;
   monster: any | null;
   label: string;
   onChangeLabel: (v: string) => void;
@@ -35,13 +36,13 @@ export function MonsterPickerDetailPane(props: {
   const disabled = !id;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, flex: 1, overflow: "auto" }}>
       <div style={{ paddingBottom: 10 }}>
         <Input value={props.label ?? ""} onChange={(e) => props.onChangeLabel(e.target.value)} placeholder={translateUi("Label")} disabled={disabled} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, paddingBottom: 10 }}>
-        <div style={{ color: theme.colors.text, display: "grid", gridTemplateColumns: "auto 1fr", gap: 6, alignItems: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: props.compact ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", gap: 5, paddingBottom: 10 }}>
+        <div style={{ color: theme.colors.text, display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gap: 6, alignItems: "center" }}>
           <span style={{ fontWeight: 700 }}>
             {translateUi("Armor Class")}{cleanDetail(props.acDetail) ? ` (${cleanDetail(props.acDetail)})` : ""}:
           </span>
@@ -56,7 +57,7 @@ export function MonsterPickerDetailPane(props: {
           />
         </div>
 
-        <div style={{ color: theme.colors.text, display: "grid", gridTemplateColumns: "auto 1fr", gap: 6, alignItems: "center" }}>
+        <div style={{ color: theme.colors.text, display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gap: 6, alignItems: "center" }}>
           <span style={{ fontWeight: 700 }}>
             {translateUi("Hit Points")}{cleanDetail(props.hpDetail) ? ` (${cleanDetail(props.hpDetail)})` : ""}:
           </span>

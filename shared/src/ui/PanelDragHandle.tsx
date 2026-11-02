@@ -1,24 +1,25 @@
-import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
-import { DragHandleGrip } from "@beholden/shared/ui";
-import { C } from "@/lib/theme";
+import type { PointerEvent } from "react";
+import { useUiTranslation } from "../i18n/useUiTranslation";
+import { DragHandleGrip } from "./DragHandleGrip";
+import { LAYOUT_COLORS as C } from "./layoutTheme";
 
-/** Small grip button used both by placed panels (Slice 5 collapses them to
- * title cards while editing) and sidebar PanelCards. Only wires up
- * pointerdown -- move/up/cancel are handled globally by
- * `usePanelDragAndDrop`'s window listeners once a drag starts, so a panel can
- * move to a different column's DOM parent mid-drag without losing them. */
+/** The owning editor handles move/up/cancel globally so dragging survives
+ * a panel moving between column DOM parents. */
 export function PanelDragHandle(props: {
   label: string;
   dragging: boolean;
-  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerDown: (e: PointerEvent) => void;
 }) {
-  const translateUi = useUiTranslation("playerUi");
+  const translateUi = useUiTranslation("sharedUi");
   return (
     <button
       type="button"
       title={translateUi("Drag {{value1}}", { value1: props.label })}
       aria-label={translateUi("Drag {{value1}}", { value1: props.label })}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onPointerDown={props.onPointerDown}
       style={{
         width: 24,

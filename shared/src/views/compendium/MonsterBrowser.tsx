@@ -11,6 +11,7 @@ import { useCompendiumHost, useOnRevisionChange, type CompendiumEntryEditing, ty
 import { ACTIVE_ROW_BACKGROUND, BrowserTitle, COMPENDIUM_COLORS as C, COMPENDIUM_ROW_HEIGHT, plainPillStyle } from "./compendiumStyle";
 import { BrowserHeaderActions, EntryRowActions } from "./EntryRowActions";
 import { MonsterFilters } from "./MonsterFilters";
+import { BrowserFilters } from "./BrowserFilters";
 
 /** Stands in for a row whose window hasn't arrived yet, so the list keeps its geometry. */
 function MonsterRowPlaceholder() {
@@ -124,7 +125,7 @@ export function MonsterBrowser(props: {
       style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
-      <MonsterFilters
+      <BrowserFilters><MonsterFilters
         compQ={browser.compQ}
         onChangeCompQ={browser.setCompQ}
         sortMode={browser.sortMode}
@@ -146,7 +147,7 @@ export function MonsterBrowser(props: {
         onChangeRulesetFilter={browser.setRulesetFilter}
         showRulesetFilter={browser.showRulesetFilter}
         onClear={clearFilters}
-      />
+      /></BrowserFilters>
 
       {actionError && <div role="alert" style={{ color: C.red, padding: "4px 8px", fontSize: "var(--fs-small)" }}>{actionError}</div>}
 

@@ -11,34 +11,13 @@ import { CharacterHudXpPopup } from "@/views/character/combat/CharacterHudXpPopu
 import { stripEditionTag } from "@/views/character/CharacterViewHelpers";
 import { CharacterViewSwitcher } from "@/views/character/CharacterViewSwitcher";
 import type { SheetViewDef } from "@/views/character/layout/panelRegistry";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
 function IconEditCrayon({ size = 16 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
       <path d="M15 5l4 4" />
-    </svg>
-  );
-}
-
-/** Palette by Delapouite, CC BY 3.0 — https://game-icons.net/1x1/delapouite/palette.html */
-export function IconPalette({ size = 16 }: { size?: number }) {
-  const gradientId = React.useId();
-  return (
-    <svg viewBox="0 0 512 512" width={size} height={size} aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop stopColor="#ff5d5d" />
-          <stop offset=".28" stopColor="#f5c451" />
-          <stop offset=".52" stopColor="#4ade80" />
-          <stop offset=".75" stopColor="#38b6ff" />
-          <stop offset="1" stopColor="#a78bfa" />
-        </linearGradient>
-      </defs>
-      <path
-        fill={`url(#${gradientId})`}
-        d="M274.174 41.604c-2.798-.01-5.576.056-8.332.195-96.67 4.85-177.38 86.93-217.842 192-40.462 105.06.914 239.97 90.336 237.48 89.42-2.5 18.09-99.6 65.486-146.12 24.345-23.9 58.852-15.48 94.207-5.64l-17.6-22.98-4.2-5.48c-1.38.06-2.79.102-4.26.09-8.24-.064-17.82-.54-25.25-7.347-13.89-12.73-14.4-31.304-14.08-47.908.32-16.605 1.12-32.375-4.05-42.587l-5.7-11.24 12.595-.37c1.046-.03 2.097-.05 3.15-.053 15.8-.073 32.304 2.776 46.914 9.03 15.584 6.67 29.254 17.44 36.154 33.053 4.18 9.46 3.665 20.116.623 29.768-.636 2.003-1.386 3.972-2.24 5.89l54.9 71.68c6.21-1.05 12.184-2.936 17.844-5.92 46.09-24.313 97.313-77.71 88.27-129.03-14.84-84.23-120.2-154.26-206.94-154.52zm60.79 39.888a34.152 39.804 15.878 0 1 17.913 7.06 34.152 39.804 15.878 0 1 4.666 54.87 34.152 39.804 15.878 0 1-48.72 9.77 34.152 39.804 15.878 0 1-4.665-54.87 34.152 39.804 15.878 0 1 30.805-16.83zm-119.85 4.467a39.307 30.27 71.565 0 1 34.603 35.56 39.307 30.27 71.565 0 1-23.213 41.31 39.307 30.27 71.565 0 1-37.678-35.47 39.307 30.27 71.565 0 1 23.213-41.31 39.307 30.27 71.565 0 1 3.07-.1zm-88.33 79.58a35.75 31.637 35.137 0 1 38.16 33.05 35.75 31.637 35.137 0 1-30.266 33.05 35.75 31.637 35.137 0 1-38.164-33.05 35.75 31.637 35.137 0 1 30.27-33.06zM421.256 170a34.25 40.436 25.644 0 1 20.41 9.578 34.25 40.436 25.644 0 1-2.914 55.51 34.25 40.436 25.644 0 1-50.107 3.966 34.25 40.436 25.644 0 1 2.916-55.51A34.25 40.436 25.644 0 1 421.26 170zm-174.152 27.95c2.982 12.774 1.784 26.197 1.548 38.275-.31 15.893.734 28.32 8.89 35.797 1.19 1.09 8.018 3.092 14.556 3.143 3.268.026 6.44-.22 8.718-.535 1.063-.146 1.874-.306 2.383-.425l13.02-9.362.02-.014c4.46-3.17 8.72-9.37 10.85-16.13 2.13-6.76 2.07-13.81 0-18.49-4.83-10.93-14.84-19.26-27.82-24.81-9.73-4.17-21-6.65-32.17-7.45zm67.455 83.808l-14.37 11L438.97 473.97l14.36-10.998-138.773-181.21zm-200.35 60.16a48.74 40.895 69.57 0 1 46.46 47.85 48.74 40.895 69.57 0 1-36.85 47.852 48.74 40.895 69.57 0 1-46.46-47.852 48.74 40.895 69.57 0 1 36.85-47.85z"
-      />
     </svg>
   );
 }
@@ -77,6 +56,7 @@ export function CharacterSheetHeader(props: {
   onSelectView: (id: string) => void;
   onCreateView: () => void;
   layoutEditMode: boolean;
+  allowLayoutEditing?: boolean;
   onToggleLayoutEditMode: () => void;
   activeBastion: { id: string; name: string; campaignId: string } | null;
   xpEarned: number;
@@ -91,6 +71,7 @@ export function CharacterSheetHeader(props: {
   const translateUi = useUiTranslation("playerUi");
   const navigate = useNavigate();
   const t = useUiTranslation("playerUi");
+  const compact = useIsNarrow("(max-width: 1024px)");
   const [binder, setBinder] = useState<{ binderId: string; binderName: string } | null>(null);
   const {
     character,
@@ -109,6 +90,7 @@ export function CharacterSheetHeader(props: {
     onSelectView,
     onCreateView,
     layoutEditMode,
+    allowLayoutEditing = true,
     onToggleLayoutEditMode,
     activeBastion,
     xpEarned,
@@ -128,6 +110,37 @@ export function CharacterSheetHeader(props: {
       .catch(() => { if (active) setBinder(null); });
     return () => { active = false; };
   }, [character.id]);
+
+  if (compact) return <nav aria-label={t("Character sheet sections")} style={{ position: "sticky", top: 0, zIndex: 30, display: "grid", gap: 10, minWidth: 0, padding: 10, marginBottom: 12, border: "1px solid rgba(255,255,255,.12)", borderRadius: 12, background: "rgba(10,18,33,.97)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <button type="button" onClick={onSelectPortrait} title={t("Change portrait")} style={{ width: 52, height: 56, padding: 0, flexShrink: 0, overflow: "hidden", borderRadius: 10, border: `2px solid ${accentColor}80`, background: `${accentColor}18`, color: C.text }}>
+        {character.imageUrl ? <img src={resolveAssetUrl(character.imageUrl) ?? undefined} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IconPlayer size={28} />}
+        {portraitUploading ? <span>{t("Saving...")}</span> : null}
+      </button>
+      <div style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
+        <strong style={{ display: "block", fontSize: "var(--fs-subtitle)", color: C.text }}>{character.name}</strong>
+        <div style={{ marginTop: 3, fontSize: "var(--fs-small)", color: accentColor }}>{identityLabels.map(stripEditionTag).join(" · ")}</div>
+      </div>
+      <span style={{ flexShrink: 0, fontWeight: 800, color: accentColor }}>{t("Lv")} {character.level}</span>
+    </div>
+    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, minWidth: 0 }}>
+      <CharacterViewSwitcher sheetViews={sheetViews} activeViewId={activeViewId} accentColor={accentColor} onSelectView={onSelectView} />
+      <IconButton onClick={onOpenInfo} title={t("Character information")}><IconCharacterInfo size={19} /></IconButton>
+      {showEngagedEnemies ? <IconButton onClick={onOpenEngagedEnemies} title={t("Open combat view")}><IconEngagedEnemies size={20} /></IconButton> : null}
+      <details style={{ marginLeft: "auto" }}>
+        <summary style={{ minHeight: 44, display: "flex", alignItems: "center", padding: "0 10px", borderRadius: 8, color: C.text, border: "1px solid rgba(255,255,255,.15)", cursor: "pointer", listStyle: "none" }}>{t("Character actions")} ▾</summary>
+        <div style={{ position: "absolute", left: 0, right: 0, top: "100%", boxSizing: "border-box", display: "grid", gap: 8, padding: 12, maxHeight: "50dvh", overflowY: "auto", overscrollBehavior: "contain", borderRadius: 10, background: "#111827", border: "1px solid rgba(255,255,255,.15)", boxShadow: "0 10px 30px #0008" }}>
+          <Button variant="ghost" onClick={() => navigate(`/characters/${character.id}/edit`)}>{t("Edit")}<CharacterRequirementsBadge characterId={character.id} /></Button>
+          {inCombat ? <span style={{ color: isMyTurn ? C.green : C.red }}>{isMyTurn ? t("Your Turn") : t("In Combat")}</span> : null}
+          {campaigns.map((campaign) => <Button key={campaign.campaignId} variant="ghost" onClick={() => navigate(`/campaigns/${campaign.campaignId}`)}>{campaign.campaignName}</Button>)}
+          {activeBastion ? <Button variant="ghost" onClick={() => navigate(`/campaigns/${activeBastion.campaignId}/bastions/${activeBastion.id}`)}>{activeBastion.name}</Button> : null}
+          {binder ? <Button variant="ghost" onClick={() => navigate(`/characters/${character.id}/binder`)}>{t("Binder")}</Button> : null}
+          {xpEarned >= xpNeeded && xpNeeded > 0 ? <Button variant="ghost" onClick={() => navigate(`/characters/${character.id}/levelup`)}>{t("Level up")}</Button> : null}
+          <CharacterHudXpPopup xpEarned={xpEarned} xpNeeded={xpNeeded} xpLevelStart={xpLevelStart} xpInput={xpInput} xpPopupOpen={xpPopupOpen} setXpInput={setXpInput} setXpPopupOpen={setXpPopupOpen} saveXp={saveXp} accentColor={accentColor} />
+        </div>
+      </details>
+    </div>
+  </nav>;
 
   return (
     <nav
@@ -309,9 +322,9 @@ export function CharacterSheetHeader(props: {
           activeViewId={activeViewId}
           accentColor={accentColor}
           onSelectView={onSelectView}
-          onCreateView={onCreateView}
+          onCreateView={allowLayoutEditing ? onCreateView : undefined}
         />
-        {layoutEditMode ? (
+        {allowLayoutEditing && (layoutEditMode ? (
           <Button
             variant="ghost"
             title={t("Done editing layout")}
@@ -332,7 +345,7 @@ export function CharacterSheetHeader(props: {
           <IconButton onClick={onToggleLayoutEditMode} title={t("Customize layout")}>
             <IconEditCrayon size={16} />
           </IconButton>
-        )}
+        ))}
       </div>
 
       <div style={{ flex: 1 }} />

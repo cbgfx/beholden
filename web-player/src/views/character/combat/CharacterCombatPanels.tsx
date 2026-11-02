@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import type { ClassFeatureEntry } from "@/views/character/CharacterSheetTypes";
@@ -140,6 +141,7 @@ export function CharacterCombatPanels({
 }: CharacterCombatPanelsProps) {
   const translateMessage = useUiMessages("playerUi");
   const translateUi = useUiTranslation("playerUi");
+  const compact = useIsNarrow("(max-width: 1024px)");
   const exhaustionPenalty = getExhaustionD20Penalty(ruleset, exhaustion);
   const displaySpeed = getExhaustedSpeed(ruleset, speed, exhaustion);
   const exhaustionAttackDisadvantage = hasExhaustionAttackAndSaveDisadvantage(ruleset, exhaustion);
@@ -207,7 +209,7 @@ export function CharacterCombatPanels({
         summary={`AC ${effectiveAc} · Init ${formatModifier(initiativeBonus)} · ${displaySpeed} ft${exhaustion > 0 ? " (exhausted)" : ""} · PP ${passivePerc}`}
         embedded={embeddedStats}
       >
-        <div style={{ display: "flex", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", overflow: "hidden" }}>
+        <div style={{ display: compact ? "grid" : "flex", gridTemplateColumns: compact ? "repeat(2, minmax(0, 1fr))" : undefined, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", overflow: "hidden" }}>
           {([
             { label: translateUi("Armor Class"), value: String(effectiveAc), icon: <IconShield size={13} />, accent: accentColor },
             { label: translateUi("Speed"),       value: `${displaySpeed} ft`,          icon: <IconSpeed size={13} />, accent: speedAccent },

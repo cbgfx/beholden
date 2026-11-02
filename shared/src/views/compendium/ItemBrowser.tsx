@@ -15,6 +15,7 @@ import { useInfiniteScroll } from "../../ui/useInfiniteScroll";
 import { useCompendiumHost, useOnRevisionChange, type CompendiumEntryEditing, type Ruleset } from "./CompendiumHost";
 import { ACTIVE_ROW_BACKGROUND, BrowserTitle, COMPENDIUM_COLORS as C, COMPENDIUM_ROW_HEIGHT, CompendiumSelect, searchInputStyle } from "./compendiumStyle";
 import { BrowserHeaderActions, EntryRowActions } from "./EntryRowActions";
+import { BrowserFilters } from "./BrowserFilters";
 
 function ItemRow(props: {
   item: ItemSearchRow;
@@ -127,7 +128,7 @@ export function ItemBrowser(props: {
       style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}
       bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, gap: 8 }}
     >
-      <input value={q} placeholder={translateUi("Search items...")} onChange={(event) => setQ(event.target.value)} style={searchInputStyle} />
+      <BrowserFilters><input value={q} placeholder={translateUi("Search items...")} onChange={(event) => setQ(event.target.value)} style={searchInputStyle} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
         <CompendiumSelect value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value)} style={{ width: "100%" }} title={translateUi("Filter by rarity")}>
@@ -160,6 +161,7 @@ export function ItemBrowser(props: {
         {hasActiveFilters && <button type="button" onClick={clearFilters} style={pill(false)}>{translateUi("Clear")}</button>}
       </div>
 
+      </BrowserFilters>
       {actionError && <div role="alert" style={{ color: C.red, padding: "4px 8px", fontSize: "var(--fs-small)" }}>{actionError}</div>}
 
       <ListShell ref={virtualList.scrollRef} onScroll={handleScroll} borderColor={C.panelBorder}>

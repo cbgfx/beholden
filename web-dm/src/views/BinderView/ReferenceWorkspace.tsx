@@ -1,4 +1,6 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
+import { BinderCompactCard } from "./BinderCompactCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
@@ -72,6 +74,7 @@ export function ReferenceWorkspace(props: {
   onRecordsChanged: () => Promise<void>;
 }) {
   const translateUi = useUiTranslation("dmUi");
+  const compact = useIsNarrow("(max-width: 1100px)");
   const labels = LABELS[props.type];
   const { isDeities, showDescription, showLeader, showIcon } = REFERENCE_VIEW_CONFIG[props.type];
   const showDescriptionColumn = showDescription && !isDeities && !showLeader;
@@ -621,7 +624,7 @@ export function ReferenceWorkspace(props: {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={translateUi("Search {{value1}}…", { value1: labels.plural.toLowerCase() })}
-            style={{ width: "min(360px, 100%)" }}
+            style={{ width: compact ? "100%" : "min(360px, 100%)" }}
           />
           {props.canEdit ? (
             <Button onClick={() => setModalRecord("new")}>
@@ -633,7 +636,7 @@ export function ReferenceWorkspace(props: {
         </div>
 
         <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflow: "hidden" }}>
-          <BinderListHeader
+          {!compact && <BinderListHeader
             columns={[
               { key: "name", label: translateUi("Name"), sortable: true },
               ...(isDeities
@@ -650,7 +653,7 @@ export function ReferenceWorkspace(props: {
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={(key) => toggleSort(key as ReferenceSortKey)}
-          />
+          />}
           {loading ? (
             <BinderListLoading />
           ) : error ? (
@@ -658,6 +661,12 @@ export function ReferenceWorkspace(props: {
           ) : sortedRecords.length ? (
             sortedRecords.map((record) => {
               const hovered = hoveredId === record.id;
+              if (compact) return <BinderCompactCard key={record.id} title={record.name}
+                onOpen={() => navigate(`/binder/${props.binderId}/${props.type}/${record.id}`)}
+                icon={isDeities ? <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} /> : showIcon ? <EntityIcon icon={record.icon ?? getDefaultEntityIcon(props.type)} size={22} /> : undefined}
+                badge={isDeities ? record.rank ?? translateUi("None") : `${translateUi(labels.usage)}: ${record.usageCount}`}>
+                {isDeities ? record.domains?.map((domain) => domain.name).join(", ") || translateUi("None") : showDescriptionColumn ? record.description : showLeader ? record.leader?.name : null}
+              </BinderCompactCard>;
               return (
                 <button
                   key={record.id}

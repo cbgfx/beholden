@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 import { formatWeight } from "@/views/character/inventory/CharacterInventory";
@@ -28,6 +29,7 @@ export function InventoryCurrencyBar({
   // since callers still pass it and other consumers of this pattern may want it later.
   void accentColor;
   const t = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const [currencyPopupCode, setCurrencyPopupCode] = useState<CurrencyCode | null>(null);
   const [currencyInput, setCurrencyInput] = useState("");
   const currencyPopupRef = useRef<HTMLDivElement | null>(null);
@@ -57,6 +59,7 @@ export function InventoryCurrencyBar({
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
+      flexWrap: phone ? "wrap" : undefined,
       gap: 12,
       marginBottom: 10,
       padding: "0 2px",
@@ -85,15 +88,16 @@ export function InventoryCurrencyBar({
             {currencyPopupCode === code && (
               <div
                 style={{
-                  position: "absolute",
-                  top: "calc(100% + 6px)",
-                  left: 0,
+                  position: phone ? "fixed" : "absolute",
+                  top: phone ? "max(12px, env(safe-area-inset-top))" : "calc(100% + 6px)",
+                  left: phone ? 12 : 0,
                   zIndex: 20,
                   background: "#1e2030",
                   border: "1px solid rgba(255,255,255,0.15)",
                   borderRadius: 10,
                   padding: "12px 14px",
-                  minWidth: 210,
+                  minWidth: phone ? 0 : 210,
+                  ...(phone ? { right: 12, maxHeight: "calc(100dvh - 24px)", overflowY: "auto" as const } : {}),
                   boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
                   display: "flex",
                   flexDirection: "column",
@@ -101,6 +105,7 @@ export function InventoryCurrencyBar({
                 }}
               >
                 <div style={{ fontSize: "var(--fs-small)", fontWeight: 700, color: C.muted, marginBottom: 2 }}>{t("Edit {{code}}", { code })}</div>
+                {phone ? <Button type="button" variant="ghost" onClick={() => setCurrencyPopupCode(null)}>{t("Close")}</Button> : null}
                 <div style={{ display: "flex", gap: 6 }}>
                   <input
                     autoFocus
@@ -116,6 +121,7 @@ export function InventoryCurrencyBar({
                     }}
                     style={{
                       flex: 1,
+                minWidth: 0,
                       padding: "6px 8px",
                       borderRadius: 6,
                       fontSize: "var(--fs-subtitle)",

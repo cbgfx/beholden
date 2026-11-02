@@ -1,3 +1,4 @@
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { ordinal } from "@beholden/shared/domain";
@@ -55,6 +56,7 @@ export function ItemSpellsPanel({
   onToggleCondition?: (key: string) => Promise<void> | void;
 }) {
   const translateUi = useUiTranslation("playerUi");
+  const phone = useIsNarrow("(max-width: 760px)");
   const [details, setDetails] = React.useState<Record<string, FetchedSpellDetail>>({});
   const [selectedSpell, setSelectedSpell] = React.useState<FetchedSpellDetail | null>(null);
   const [chargeSavingId, setChargeSavingId] = React.useState<string | null>(null);
@@ -164,7 +166,7 @@ export function ItemSpellsPanel({
             color={inventoryRarityColor(item.rarity ?? null)}
             storageKey={`${PANEL_IDS.itemSpells}-${item.id}`}
             actions={chargesMax > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, ...(phone ? { flexWrap: "wrap", maxWidth: "100%" } : {}) }}>
                 <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginRight: 3 }}>{translateUi("charges")} {charges}/{chargesMax}</span>
                 {Array.from({ length: chargesMax }).map((_, i) => {
                   const filled = i < charges;
@@ -211,7 +213,7 @@ export function ItemSpellsPanel({
                     {level === -1 ? (groupSpells.every((spell) => failedKeysRef.current.has(spell.id)) ? "Unknown level" : "Loading...") : LEVEL_LABELS[level] ?? translateUi("Level {{value1}}", { value1: level })}
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
+                  <div hidden={phone} style={{ display: phone ? "none" : "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER, gap: "0 8px", alignItems: "end", marginBottom: 4 }}>
                     <div style={spellColumnHeaderStyle}>{translateUi("CST")}</div>
                     <div style={spellColumnHeaderStyle}>{translateUi("NAME")}</div>
                     <div style={{ ...spellColumnHeaderStyle, textAlign: "center" }}>{translateUi("TIME")}</div>
@@ -251,21 +253,22 @@ export function ItemSpellsPanel({
                         key={i}
                         className="character-hover-row"
                         style={{
-                          display: "grid", gridTemplateColumns: SPELL_ROW_GRID_WITH_MARKER,
-                          alignItems: "center", gap: "0 8px",
+                          display: "grid", gridTemplateColumns: phone ? "repeat(2, minmax(0,1fr))" : SPELL_ROW_GRID_WITH_MARKER,
+                          ...(phone ? { overflowWrap: "anywhere" } : {}),
+                          alignItems: "center", gap: phone ? "8px" : "0 8px",
                           margin: "0 -8px", padding: "7px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)",
                           cursor: detail ? "pointer" : "default",
                         }}
                         onClick={() => { if (detail) setSelectedSpell(detail); }}
                       >
                         <div title={spell.stored ? translateUi("Stored spell") : translateUi("{{value1}} charge{{value2}}", { value1: spell.cost === "level" ? "Spell level" : spell.cost, value2: spell.cost !== 1 ? "s" : "" })} style={{
-                          width: 20, height: 20, borderRadius: "50%",
+                          width: phone ? 44 : 20, height: phone ? 44 : 20, borderRadius: "50%",
                           background: accentColor, display: "grid", placeItems: "center", flexShrink: 0,
                         }}>
                           <span style={{ color: "#fff", fontSize: "var(--fs-tiny)", fontWeight: 900, lineHeight: 1 }}>{spell.stored ? "S" : spell.cost === "level" ? "L" : spell.cost}</span>
                         </div>
 
-                        <div style={{ minWidth: 0 }}>
+                        <div style={{ minWidth: 0, ...(phone ? { gridColumn: "1 / -1", gridRow: 1 } : {}) }}>
                           <div style={{ fontWeight: 700, fontSize: "var(--fs-subtitle)", color: C.text }}>
                             {detail?.name ?? spell.id}
                             {concentration && <span title={translateUi("Concentration")} style={{ marginLeft: 5, fontSize: "var(--fs-tiny)", color: C.colorRitual }}>◆</span>}

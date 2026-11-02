@@ -1,3 +1,7 @@
+import {
+  normalizeColumnHeaders,
+  type ColumnHeader,
+} from "@beholden/shared/domain/layoutColumns";
 export type PanelAppearance = {
   accent?: string;
   background?: string;
@@ -9,13 +13,11 @@ export type WorkspaceView = {
   columns: string[][];
   colors: Record<string, PanelAppearance>;
   appearance: PanelAppearance;
+  columnHeaders?: ColumnHeader[];
 };
 export type WorkspacePreferences = { activeId: string; views: WorkspaceView[] };
 
-function normalizeColumns(
-  value: unknown,
-  defaults: string[][],
-): string[][] {
+function normalizeColumns(value: unknown, defaults: string[][]): string[][] {
   const allowed = new Set(defaults.flat());
   const seen = new Set<string>();
   const source =
@@ -83,6 +85,7 @@ export function normalizePreferences(
         if (view.colors && Object.hasOwn(view.colors, id))
           colors[id] = normalizeAppearance(view.colors[id]);
       }
+      const columns = normalizeColumns(view.columns, defaults);
       return [
         {
           id: view.id,
@@ -90,7 +93,11 @@ export function normalizePreferences(
             typeof view.name === "string" && view.name.trim()
               ? view.name.slice(0, 60)
               : "Layout",
-          columns: normalizeColumns(view.columns, defaults),
+          columns,
+          columnHeaders: normalizeColumnHeaders(
+            view.columnHeaders,
+            columns.length,
+          ),
           colors,
           appearance: normalizeAppearance(view.appearance),
         },

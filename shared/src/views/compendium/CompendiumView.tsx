@@ -1,4 +1,6 @@
 import * as React from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useIsNarrow } from "../../ui/useIsNarrow";
 import { useUiTranslation } from "../../i18n/useUiTranslation";
 import { IconChest, IconInspiration, IconMonster, IconNotes, IconSpells } from "../../icons";
 import { withAlpha } from "../../ui/colors";
@@ -11,7 +13,8 @@ import {
   type CompendiumPanelProps,
   type Ruleset,
 } from "./CompendiumHost";
-import { COMPENDIUM_COLORS as C } from "./compendiumStyle";
+import { COMPENDIUM_COLORS as C, plainPillStyle } from "./compendiumStyle";
+import { CompendiumSectionPicker } from "./CompendiumSectionPicker";
 import { FeatBrowser, FeatDetail } from "./FeatPanels";
 import { ItemBrowser } from "./ItemBrowser";
 import { ItemDetail } from "./ItemDetail";
@@ -91,16 +94,56 @@ export function CompendiumView(props: {
   navFooter?: React.ReactNode;
 }) {
   const translateUi = useUiTranslation("sharedUi");
+  // The three desktop columns need 1012px including gaps and padding.
+  const compact = useIsNarrow("(max-width: 1024px)");
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [serverRevision] = useCompendiumRevision();
   const revision = serverRevision + (props.localRevision ?? 0);
   const host = React.useMemo(() => ({ Panel: props.Panel, editing: props.editing, revision }), [props.Panel, props.editing, revision]);
 
-  const [section, setSection] = React.useState<string>("monsters");
-  const [monster, setMonster] = React.useState<Selection>(null);
-  const [spell, setSpell] = React.useState<Selection>(null);
-  const [item, setItem] = React.useState<Selection>(null);
-  const [feat, setFeat] = React.useState<Selection>(null);
-  const select = (setter: (value: Selection) => void) => (id: string | null, ruleset?: Ruleset | null) => setter(id ? { id, ruleset: ruleset ?? null } : null);
+  const [desktopSection, setDesktopSection] = React.useState<string>("monsters");
+  const requestedSection = params.get("compendiumSection") ?? desktopSection;
+  const section = ["monsters", "spells", "items", "feats", "rules", ...(props.extraSections ?? []).map((entry) => entry.id)].includes(requestedSection) ? requestedSection : "monsters";
+  const [selections, setSelections] = React.useState<Record<string, Selection>>({});
+  const entry = params.get("compendiumEntry");
+  const ruleset = params.get("compendiumRuleset");
+  const selected: Selection = entry ? { id: entry, ruleset: ruleset === "5e" || ruleset === "5.5e" ? ruleset : null } : selections[section] ?? null;
+  const monster = section === "monsters" ? selected : null;
+  const spell = section === "spells" ? selected : null;
+  const item = section === "items" ? selected : null;
+  const feat = section === "feats" ? selected : null;
+  const select = (id: string | null, ruleset?: Ruleset | null) => {
+    setSelections((current) => ({ ...current, [section]: id ? { id, ruleset: ruleset ?? null } : null }));
+    if (compact || entry) {
+      const next = new URLSearchParams(params);
+      next.set("compendiumSection", section);
+      next.delete("compendiumEntry");
+      next.delete("compendiumRuleset");
+      if (id) next.set("compendiumEntry", id);
+      if (id && ruleset) next.set("compendiumRuleset", ruleset);
+      setParams(next, { replace: Boolean(entry), state: { ...location.state, compendiumDetail: Boolean(id) && (Boolean(entry) ? Boolean(location.state?.compendiumDetail) : true) } });
+    }
+  };
+  const changeSection = (value: string) => {
+    if (compact || params.has("compendiumSection")) {
+      const next = new URLSearchParams(params);
+      next.set("compendiumSection", value);
+      next.delete("compendiumEntry");
+      next.delete("compendiumRuleset");
+      setParams(next, { replace: Boolean(entry), state: { ...location.state, compendiumDetail: false } });
+    } else setDesktopSection(value);
+  };
+  const backToList = () => {
+    if (location.state?.compendiumDetail) navigate(-1);
+    else {
+      const next = new URLSearchParams(params);
+      next.delete("compendiumEntry");
+      next.delete("compendiumRuleset");
+      setParams(next, { replace: true });
+    }
+  };
 
   const builtIn: Array<{ id: BuiltInSection; label: string; icon: React.ReactNode }> = [
     { id: "monsters", label: translateUi("Monsters"), icon: <IconMonster size={20} /> },
@@ -111,6 +154,7 @@ export function CompendiumView(props: {
   ];
   const extra = props.extraSections?.find((candidate) => candidate.id === section);
   const hasDetail = !extra && section !== "rules";
+  const showDetail = compact && hasDetail && Boolean(entry);
 
   return (
     <CompendiumHostProvider value={host}>
@@ -119,35 +163,39 @@ export function CompendiumView(props: {
           style={{
             height: "100%",
             display: "grid",
-            gridTemplateColumns: hasDetail ? "180px minmax(360px, 1fr) 420px" : "180px minmax(360px, 1fr)",
-            gridTemplateRows: "1fr",
+            gridTemplateColumns: compact ? "minmax(0, 1fr)" : hasDetail ? "180px minmax(360px, 1fr) 420px" : "180px minmax(360px, 1fr)",
+            gridTemplateRows: compact ? "auto minmax(0, 1fr)" : "1fr",
             gap: 14,
             alignItems: "stretch",
             minHeight: 0,
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, minHeight: 0 }}>
-            <props.Panel title={translateUi("Reference")} style={{ display: "flex", flexDirection: "column" }}>
+            {compact ? <>
+              <CompendiumSectionPicker entries={[...builtIn, ...(props.extraSections ?? [])]} value={section} onChange={changeSection} />
+              {props.navFooter ? <details><summary>{translateUi("Reference")}</summary>{props.navFooter}</details> : null}
+            </> : <props.Panel title={translateUi("Reference")} style={{ display: "flex", flexDirection: "column" }}>
               <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {[...builtIn, ...(props.extraSections ?? [])].map((entry) => (
-                  <NavButton key={entry.id} label={entry.label} icon={entry.icon} active={section === entry.id} onClick={() => setSection(entry.id)} />
+                  <NavButton key={entry.id} label={entry.label} icon={entry.icon} active={section === entry.id} onClick={() => changeSection(entry.id)} />
                 ))}
               </nav>
-            </props.Panel>
-            {props.navFooter}
+            </props.Panel>}
+            {!compact && props.navFooter}
           </div>
 
-          <div style={columnStyle}>
-            {section === "monsters" && <MonsterBrowser selectedMonsterId={monster?.id ?? null} selectedMonsterRuleset={monster?.ruleset} onSelectMonster={select(setMonster)} />}
-            {section === "spells" && <SpellBrowser selectedSpellId={spell?.id} selectedSpellRuleset={spell?.ruleset} onSelectSpell={select(setSpell)} />}
-            {section === "items" && <ItemBrowser selectedItemId={item?.id} selectedItemRuleset={item?.ruleset} onSelectItem={select(setItem)} />}
-            {section === "feats" && <FeatBrowser selectedFeatId={feat?.id} selectedFeatRuleset={feat?.ruleset} onSelectFeat={select(setFeat)} />}
+          <div style={{ ...columnStyle, display: showDetail ? "none" : "flex" }}>
+            {section === "monsters" && <MonsterBrowser selectedMonsterId={monster?.id ?? null} selectedMonsterRuleset={monster?.ruleset} onSelectMonster={select} />}
+            {section === "spells" && <SpellBrowser selectedSpellId={spell?.id} selectedSpellRuleset={spell?.ruleset} onSelectSpell={select} />}
+            {section === "items" && <ItemBrowser selectedItemId={item?.id} selectedItemRuleset={item?.ruleset} onSelectItem={select} />}
+            {section === "feats" && <FeatBrowser selectedFeatId={feat?.id} selectedFeatRuleset={feat?.ruleset} onSelectFeat={select} />}
             {section === "rules" && <RulesReference />}
             {extra?.render()}
           </div>
 
           {hasDetail && (
-            <div style={columnStyle}>
+            <div style={{ ...columnStyle, display: compact && !showDetail ? "none" : "flex", ...(compact ? { overflow: "auto", overflowWrap: "anywhere" } : {}) }}>
+              {showDetail && <button type="button" onClick={backToList} style={{ ...plainPillStyle, minHeight: 44, flexShrink: 0, alignSelf: "start", marginBottom: 8 }}>{translateUi("Back to list")}</button>}
               {section === "monsters" && (monster
                 ? <MonsterDetail monsterId={monster.id} ruleset={monster.ruleset} />
                 : <DetailPrompt title={translateUi("Stat Block")} text={translateUi("Select a monster from the list to view its full stat block here.")} />)}

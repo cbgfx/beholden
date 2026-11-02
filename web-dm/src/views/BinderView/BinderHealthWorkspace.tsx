@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { fetchBinderHealth, type BinderHealth } from "@/services/binderApi";
 import { theme, withAlpha } from "@/theme/theme";
 import { useBinderResource } from "./useBinderResource";
+import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
 export function BinderHealthWorkspace({ binderId, accent }: { binderId: string; accent: string }) {
   const translateUi = useUiTranslation("dmUi");
+  const compact = useIsNarrow("(max-width: 1100px)");
   const { data: health, error } = useBinderResource<BinderHealth>(binderId, fetchBinderHealth);
   if (error) return <div role="alert" style={{ color: theme.colors.red }}>{error}</div>;
   if (!health) return <div style={{ color: theme.colors.muted }}>{translateUi("Checking Binder health…")}</div>;
@@ -51,7 +53,8 @@ export function BinderHealthWorkspace({ binderId, accent }: { binderId: string; 
               style={{
                 padding: "11px 14px",
                 display: "grid",
-                gridTemplateColumns: "minmax(180px,1fr) 2fr",
+                gridTemplateColumns: compact ? "minmax(0,1fr)" : "minmax(180px,1fr) 2fr",
+                ...(compact ? { overflowWrap: "anywhere", minHeight: 44 } : {}),
                 gap: 12,
                 borderTop: `1px solid ${theme.colors.panelBorder}`,
                 color: theme.colors.text,
