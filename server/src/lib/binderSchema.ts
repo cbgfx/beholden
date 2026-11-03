@@ -112,6 +112,14 @@ CREATE TABLE IF NOT EXISTS binder_locations (
   updated_at INTEGER NOT NULL
 );
 
+-- Maps live in the database so Binder exports and database backups are self-contained.
+-- Keep image bytes out of record projections; only the authorized image route reads them.
+CREATE TABLE IF NOT EXISTS binder_location_maps (
+  id TEXT PRIMARY KEY REFERENCES binder_locations(id) ON DELETE CASCADE,
+  image_base64 TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS binder_points_of_interest (
   id TEXT PRIMARY KEY REFERENCES binder_records(id) ON DELETE CASCADE,
   location_id TEXT REFERENCES binder_locations(id) ON DELETE RESTRICT,

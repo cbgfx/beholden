@@ -10,5 +10,6 @@ export default {
   mentionBinderRecord: "Mentionner une fiche du classeur",
   mentionOptionLabel: "@ Mentionner",
   mentionSuggestions: "Suggestions de mention",
+  noMatchingMentions: "Aucune fiche correspondante",
   placeholder: "Écrire...",
 };

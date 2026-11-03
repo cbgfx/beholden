@@ -29,6 +29,7 @@ import {
   parseJson,
 } from "../../lib/db.js";
 import { importCampaignDocument } from "./helpers.js";
+import { previewCampaignImport } from "./preview.js";
 import { CAMPAIGN_EXPORT_FORMAT, CAMPAIGN_EXPORT_VERSION } from "./schemas.js";
 import { BASTION_SELECT } from "../bastions/helpers.js";
 
@@ -160,6 +161,15 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
     res.send(JSON.stringify(body, null, 2));
   });
 
+  app.post("/api/campaigns/import/preview", requireAdmin, ctx.upload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
+    try {
+      res.json(previewCampaignImport(db, JSON.parse(req.file.buffer.toString("utf-8"))));
+    } catch (error) {
+      res.status(400).json({ ok: false, message: errorMessage(error, "Preview failed") });
+    }
+  });
+
   // MARK: - POST /api/campaigns/import
   app.post("/api/campaigns/import", requireAdmin, ctx.upload.single("file"), (req, res) => {
     if (!req.file) return res.status(400).json({ ok: false, message: "No file uploaded" });
@@ -177,6 +187,11 @@ export function registerExportImportRoutes(app: Express, ctx: ServerContext) {
 
     let campaignId: string;
     try {
+      const preview = previewCampaignImport(db, doc);
+      // Recheck at commit: a campaign created after preview must not be silently replaced.
+      if (preview.existingName !== null && req.body?.replaceCampaignId !== preview.campaignId) {
+        return res.status(409).json({ ok: false, message: "This campaign already exists. Preview it and explicitly choose Replace campaign." });
+      }
       campaignId = importCampaignDocument(db, doc, ctx.helpers.uid);
     } catch (error) {
       const message = errorMessage(error, "Import failed");

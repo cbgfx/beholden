@@ -182,6 +182,14 @@ it("HTTP campaign export/import retains narrative, currency, membership and port
     assert.equal(document.version, 3);
     assert.equal(document.format, "beholden.campaign");
     const file = new FormData(); file.append("file", new Blob([JSON.stringify(document)], { type: "application/json" }), "campaign.json");
+    const previewResponse = await f.request("/api/campaigns/import/preview", { method: "POST", body: file });
+    assert.equal(previewResponse.status, 200);
+    const preview = await previewResponse.json() as { existingName: string; counts: { collection: string; incoming: number; existing: number }[] };
+    assert.equal(preview.existingName, "Campaign");
+    assert.deepEqual(preview.counts.find(row => row.collection === "adventures"), { collection: "adventures", incoming: 1, existing: 1 });
+    assert.equal((await f.request("/api/campaigns/import", { method: "POST", body: file })).status, 409);
+    assert.equal(f.db.prepare("SELECT count(*) FROM adventures WHERE id='adv'").pluck().get(), 1);
+    file.append("replaceCampaignId", "c");
     assert.equal((await f.request("/api/campaigns/import", { method: "POST", body: file })).status, 200);
     const row = f.db.prepare("SELECT campaign_story,campaign_notes,party_currency_json FROM campaigns WHERE id='c'").get() as Record<string, string>;
     assert.equal(row.campaign_story, "Story"); assert.equal(row.campaign_notes, "Private notes");

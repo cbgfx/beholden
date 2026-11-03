@@ -1,3 +1,4 @@
+import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
 import { useWs } from "@/services/ws";
 import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useRichTextDraft } from "./useRichTextDraft";
@@ -16,7 +17,7 @@ import { SearchableMultiFilter, SearchableSelect } from "@/components/Searchable
 import { createBinderMortal, deleteBinderMortal, fetchBinderMortals, fetchMortalOptions, updateBinderMortal, uploadBinderMortalImage, type BinderMortal, type BinderMortalInput, type MortalOptions } from "@/services/binderMortalApi";
 import { BINDER_MORTAL_COLUMNS, BinderDataTableRow, ImageLightbox } from "@beholden/shared/ui";
 import { MortalRecordModal } from "@/views/BinderView/MortalRecordModal";
-import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
@@ -50,6 +51,7 @@ function removeFilterValue(filters: MortalFilters, key: keyof MortalFilters, val
 }
 
 function InlineRichTextField(props: {
+  sourceField: string;
   label: string;
   value: string | null;
   canEdit: boolean;
@@ -75,7 +77,7 @@ function InlineRichTextField(props: {
             {error ? <div role="alert">{error}</div> : null}
       </div>
     </div> : <div style={{ minHeight: 54, marginTop: 7, padding: "7px 8px", color: props.value ? theme.colors.text : theme.colors.muted, lineHeight: 1.55 }}>
-      {props.value ? <MarkdownRichText text={props.value} validMentionIds={props.validMentionIds} binderId={props.binderId} /> : translateUi("No {{value1}} yet.", { value1: props.label.toLocaleLowerCase() })}
+      {props.value ? <MarkdownRichText sourceField={props.sourceField} text={props.value} validMentionIds={props.validMentionIds} binderId={props.binderId} /> : translateUi("No {{value1}} yet.", { value1: props.label.toLocaleLowerCase() })}
     </div>}
   </section>;
 }
@@ -498,6 +500,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               <InlineRichTextField
                 key={`${props.binderId}:${selected.id}:notes`}
                 binderId={props.binderId}
+                sourceField="description"
                 label={translateUi("Notes")}
                 value={selected.notes}
                 mentions={mentions}
@@ -512,6 +515,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
               <InlineRichTextField
                 key={`${props.binderId}:${selected.id}:dm-notes`}
                 binderId={props.binderId}
+                sourceField="dm_notes"
                 label={translateUi("DM Notes")}
                 value={selected.dmNotes}
                 mentions={mentions}

@@ -1,5 +1,6 @@
 import { api, jsonInit } from "@/services/api";
 import { imageUploadForm } from "@beholden/shared/api/imageUpload";
+import { MAP_MAX_BYTES } from "@beholden/shared/api/locationMaps";
 
 export type BinderReferenceType =
   | "races" | "positions" | "domains" | "organizations" | "deities"
@@ -29,6 +30,7 @@ export type BinderReferenceRecord = {
   updatedAt: number;
   imageUrl: string | null;
   imageUpdatedAt: number | null;
+  mapUpdatedAt?: number | null;
   /** Only present on `deities` records. */
   domains?: BinderReferenceLink[];
   /** Only present on `domains` records. */
@@ -58,6 +60,18 @@ export type BinderReferenceInput = {
 
 function base(binderId: string, type: BinderReferenceType) {
   return `/api/binders/${binderId}/reference/${type}`;
+}
+
+export async function uploadLocationMap(binderId: string, recordId: string, file: File): Promise<void> {
+  // Maps bypass the portrait helper's 1024px browser resize.
+  if (file.size > MAP_MAX_BYTES) throw new Error("Choose a map smaller than 12 MB.");
+  const body = new FormData();
+  body.append("image", file);
+  await api(`/api/binders/${binderId}/locations/${recordId}/map`, { method: "POST", body });
+}
+
+export async function removeLocationMap(binderId: string, recordId: string): Promise<void> {
+  await api(`/api/binders/${binderId}/locations/${recordId}/map`, { method: "DELETE" });
 }
 
 export function fetchBinderReferences(

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAP_MAX_BYTES } from "@beholden/shared/api/locationMaps";
 import type { Db } from "../../lib/db.js";
 
 const Row = z.record(z.string(), z.unknown());
@@ -22,7 +23,7 @@ const TABLES = [
   "mortals", "binder_npcs", "binder_player_characters", "deities", "deity_domains",
   "binder_organizations", "organization_memberships", "binder_events", "binder_event_tags",
   "binder_event_tag_links", "binder_event_records", "binder_event_campaigns", "binder_items",
-  "binder_relationships", "binder_record_mentions",
+  "binder_relationships", "binder_record_mentions", "binder_location_maps",
 ] as const;
 
 const TABLE_FILTER: Record<(typeof TABLES)[number], string> = {
@@ -33,6 +34,7 @@ const TABLE_FILTER: Record<(typeof TABLES)[number], string> = {
   binder_continents: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
   binder_countries: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
   binder_locations: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
+  binder_location_maps: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
   binder_points_of_interest: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
   mortals: "id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
   binder_npcs: "mortal_id IN (SELECT id FROM binder_records WHERE binder_id = ?)",
@@ -195,6 +197,13 @@ export function importBinderDocument(db: Db, raw: unknown, ownerUserId: string, 
       INSERT INTO binder_locations (id, country_id, continent_id, description, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(map(row.id), map(row.country_id), map(row.continent_id), text(row.description), now, now);
+    for (const row of rows("binder_location_maps")) {
+      // Map bytes must remain bytes: never rewrite record IDs inside the encoded image.
+      const image = z.string().max(Math.ceil(MAP_MAX_BYTES / 3) * 4).regex(/^[A-Za-z0-9+/]+={0,2}$/).parse(row.image_base64);
+      const bytes = Buffer.from(image, "base64");
+      if (bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WEBP") throw new Error("Invalid map image in Binder export");
+      db.prepare("INSERT INTO binder_location_maps(id,image_base64,updated_at) VALUES (?,?,?)").run(map(row.id), image, now);
+    }
     for (const row of rows("binder_points_of_interest")) db.prepare("INSERT INTO binder_points_of_interest (id, location_id, country_id, parent_poi_id, description, created_at, updated_at, icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(map(row.id), map(row.location_id), map(row.country_id), map(row.parent_poi_id), text(row.description), now, now, row.icon ?? null);
     for (const row of rows("mortals")) db.prepare(
       `

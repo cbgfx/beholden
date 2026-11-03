@@ -27,6 +27,8 @@ test("only image upload posts land in the upload bucket", () => {
   assert.equal(isImageUploadRequest({ method: "POST", path: "/api/players/p1/image" }), true);
   assert.equal(isImageUploadRequest({ method: "POST", path: "/api/me/characters/c1/image" }), true);
   assert.equal(isImageUploadRequest({ method: "POST", path: "/api/binders/b1/mortals/m1/image" }), true);
+  assert.equal(isImageUploadRequest({ method: "POST", path: "/api/binders/b1/locations/l1/map" }), true);
+  assert.equal(isImageUploadRequest({ method: "GET", path: "/api/binders/b1/locations/l1/map" }), false);
   // Reading a character, deleting a portrait, or posting anything else is ordinary API traffic.
   assert.equal(isImageUploadRequest({ method: "GET", path: "/api/players/p1/image" }), false);
   assert.equal(isImageUploadRequest({ method: "DELETE", path: "/api/players/p1/image" }), false);

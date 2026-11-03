@@ -11,6 +11,7 @@ export type ReferenceRow = {
   parent_poi_id?: string | null; parent_name?: string | null; image_url?: string | null;
   image_updated_at?: number | null; leader_mortal_id?: string | null; leader_name?: string | null;
   icon?: string | null; rank?: string | null;
+  map_updated_at?: number | null;
 };
 export type ReferenceLink = { id: string; name: string };
 export type ResolvedParent = { id: string; record_type: RecordType } | null;
@@ -37,6 +38,7 @@ export function toReferenceDto(row: ReferenceRow, links?: { domains?: ReferenceL
     icon: row.icon ?? null, rank: row.rank ?? null, usageCount: row.usage_count,
     createdAt: row.created_at, updatedAt: row.updated_at,
     imageUrl: row.image_url ?? null, imageUpdatedAt: row.image_updated_at ?? null,
+    ...(row.map_updated_at != null ? { mapUpdatedAt: row.map_updated_at } : {}),
     ...(links?.domains ? { domains: links.domains } : {}),
     ...(links?.deities ? { deities: links.deities } : {}),
   };
@@ -45,10 +47,10 @@ export function toReferenceDto(row: ReferenceRow, links?: { domains?: ReferenceL
 export function referenceSelectSql(type: ReferenceType, entry: ReferenceConfig, iconEnabled: boolean): string {
   const iconColumn = iconEnabled ? ", r.icon" : "";
   const parentColumns = (type === "countries" ? ", r.continent_id, parent_br.name AS parent_name"
-    : type === "locations" ? ", r.country_id, parent_br.name AS parent_name"
+    : type === "locations" ? ", r.country_id, parent_br.name AS parent_name, (SELECT updated_at FROM binder_location_maps WHERE id=r.id) AS map_updated_at"
       : type === "points-of-interest" ? ", r.location_id, r.country_id, r.parent_poi_id, parent_br.name AS parent_name"
         : type === "deities" ? ", r.image_url, r.image_updated_at, r.rank, r.dm_notes"
-          : type === "organizations" ? ", r.leader_mortal_id, leader_br.name AS leader_name" : "") + iconColumn;
+          : type === "organizations" ? ", r.dm_notes, r.leader_mortal_id, leader_br.name AS leader_name" : "") + iconColumn;
   const parentJoin = type === "countries" ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.continent_id"
     : type === "locations" ? "LEFT JOIN binder_records parent_br ON parent_br.id = r.country_id"
       : type === "points-of-interest" ? "LEFT JOIN binder_records parent_br ON parent_br.id = COALESCE(r.location_id, r.country_id, r.parent_poi_id)"

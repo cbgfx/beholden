@@ -223,6 +223,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       SELECT br.id, br.record_type AS type, br.name,
              COALESCE(deity.description,continent.description,country.description,location.description,poi.description) AS description,
              deity.rank, deity.image_url AS imageUrl, deity.image_updated_at AS imageUpdatedAt,
+             (SELECT updated_at FROM binder_location_maps WHERE id=br.id) AS mapUpdatedAt,
              CASE WHEN br.record_type='deity' THEN (
                SELECT GROUP_CONCAT(domain_record.name, '||')
                FROM deity_domains dd

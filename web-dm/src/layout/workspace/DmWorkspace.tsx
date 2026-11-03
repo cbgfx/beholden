@@ -19,6 +19,7 @@ import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import {
   ColumnHeading,
   ColumnTabs,
+  showsColumnHeading,
   type ColumnView,
 } from "@beholden/shared/ui/ColumnNavigation";
 import { PanelCard } from "@beholden/shared/ui/LayoutPanelCard";
@@ -478,10 +479,7 @@ function WorkspaceEditor({
             data-workspace-column={columnIndex}
             className={`dm-workspace-column${editing ? " editing" : ""}`}
           >
-            {compact ||
-            editing ||
-            view.columnHeaders?.[columnIndex]?.name ||
-            view.columnHeaders?.[columnIndex]?.icon ? (
+            {showsColumnHeading(view, columnIndex, { compact, editing }) ? (
               <ColumnHeading
                 view={columnView}
                 index={columnIndex}

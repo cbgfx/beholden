@@ -10,5 +10,6 @@ export default {
   mentionBinderRecord: "Mention Binder record",
   mentionOptionLabel: "@ Mention",
   mentionSuggestions: "Mention suggestions",
+  noMatchingMentions: "No matching records",
   placeholder: "Write...",
 };

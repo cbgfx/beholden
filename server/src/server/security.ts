@@ -129,9 +129,11 @@ function isRateLimitedApiRequest(req: express.Request): boolean {
   return true;
 }
 
-/** Image uploads: the handful of POST routes that end in /image. */
+/** Portrait and map uploads share the tighter image-processing rate limit. */
 export function isImageUploadRequest(req: Pick<express.Request, "method" | "path">): boolean {
-  return req.method === "POST" && req.path.startsWith("/api/") && req.path.endsWith("/image");
+  return req.method === "POST" && req.path.startsWith("/api/") && (
+    req.path.endsWith("/image") || /^\/api\/binders\/[^/]+\/locations\/[^/]+\/map$/.test(req.path)
+  );
 }
 
 // MARK: - Create In Memory Rate Limiter

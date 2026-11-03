@@ -7,6 +7,7 @@ Keep reusable behavior in `shared`; keep app-specific data, defaults, routes and
 - Character-sheet and DM workspace adapters provide panel labels, default icons and persistence callbacks. Their panel registries and layout restrictions remain app-specific.
 - `ModalFrame.tsx` owns portal placement, viewport sizing, focus, Escape and scroll locking. The DM `Modal.tsx` supplies theme colors only.
 - `GameIconPickerDialog.tsx` and `gameIconsCollection.ts` provide one searchable icon picker/catalog for Binder and layout editors.
+- `LocationMap.tsx` provides attachment controls and an authenticated, scrollable zoom viewer for both apps. The DM host owns uploads/removal and record refresh; the server checks location visibility on every map download. Map limits live in `shared/src/api/locationMaps.ts`.
 - `LayoutEditorToolbar.tsx`, `LayoutPanelCard.tsx`, `PanelDragHandle.tsx` and `layoutTheme.ts` provide common editor presentation. App-specific restrictions and disabled-action explanations are passed as props.
 - Compendium navigation and browser components live under `shared/src/views/compendium`; editing permissions and extra sections come from each app's host adapter.
 

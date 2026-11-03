@@ -1,3 +1,5 @@
+import type { BinderBacklink } from "@beholden/shared/domain/binderBacklinks";
+export type { BinderBacklink } from "@beholden/shared/domain/binderBacklinks";
 import { api, jsonInit } from "@/services/api";
 
 export type BinderRecordOption = {
@@ -40,7 +42,6 @@ export const deleteBinderEvent = (binderId: string, id: string) =>
   api<{ ok: true }>(`${base(binderId)}/events/${id}`, { method: "DELETE" });
 export const syncBinderMentions = (binderId: string, sourceRecordId: string, sourceField: string, text: string | null) =>
   api<{ ok: true }>(`${base(binderId)}/mentions`, jsonInit("PUT", { sourceRecordId, sourceField, text }));
-export type BinderBacklink = { id: string; name: string; type: string; route: string; fields: string[] };
 export const fetchBinderBacklinks = (binderId: string, recordId: string) =>
   api<BinderBacklink[]>(`${base(binderId)}/records/${recordId}/backlinks`);
 export type BinderRelatedRecord = { id: string; name: string; type: string; relationship: string; route: string };

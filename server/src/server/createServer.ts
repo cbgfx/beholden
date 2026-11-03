@@ -76,6 +76,7 @@ import { registerBinderRoutes } from "../routes/binders/core.js";
 import { registerBinderReferenceRoutes } from "../routes/binders/references.js";
 import { registerBinderMortalRoutes } from "../routes/binders/mortals.js";
 import { registerBinderLoreRoutes } from "../routes/binders/lore.js";
+import { registerBinderMapRoutes } from "../routes/binders/maps.js";
 
 /** Image directories served straight out of the data directory. */
 const IMAGE_MOUNTS = [
@@ -242,6 +243,7 @@ export function createServer() {
   registerBinderReferenceRoutes(app, ctx);
   registerBinderMortalRoutes(app, ctx);
   registerBinderLoreRoutes(app, ctx);
+  registerBinderMapRoutes(app, ctx);
   registerWebUiRoutes(app, ctx);
   registerPartyInventoryRoutes(app, ctx);
   registerBastionRoutes(app, ctx);

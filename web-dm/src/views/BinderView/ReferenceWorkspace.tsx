@@ -1,3 +1,5 @@
+import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
+import { LocationMap } from "@beholden/shared/ui/LocationMap";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { BinderCompactCard } from "./BinderCompactCard";
@@ -18,12 +20,14 @@ import {
   fetchBinderReferences,
   updateBinderReference,
   uploadBinderReferenceImage,
+  uploadLocationMap,
+  removeLocationMap,
   type BinderReferenceInput,
   type BinderReferenceRecord,
   type BinderReferenceType,
 } from "@/services/binderReferenceApi";
 import { ReferenceRecordModal } from "@/views/BinderView/ReferenceRecordModal";
-import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, syncBinderMentions, type BinderRecordOption } from "@/services/binderLoreApi";
 import { EntityIcon, IconPicker, getDefaultEntityIcon, ICON_ENABLED_REFERENCE_TYPES } from "@/components/iconPicker";
 import { BacklinksPanel } from "./BacklinksPanel";
@@ -385,6 +389,14 @@ export function ReferenceWorkspace(props: {
               )}
             </section>
           ) : null}
+          {props.type === "locations" && (props.canEdit || selected.mapUpdatedAt) ? <LocationMap
+            key={selected.id}
+            name={selected.name}
+            endpoint={`/api/binders/${props.binderId}/locations/${selected.id}/map`}
+            updatedAt={selected.mapUpdatedAt}
+            onUpload={props.canEdit ? async (file) => { await uploadLocationMap(props.binderId, selected.id, file); await reload(); } : undefined}
+            onRemove={props.canEdit ? async () => { await removeLocationMap(props.binderId, selected.id); await reload(); } : undefined}
+          /> : null}
           {showDescription ? (
             <section>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -457,7 +469,7 @@ export function ReferenceWorkspace(props: {
                   }}
                 >
                   {selected.description ? (
-                    <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} />
+                    <MarkdownRichText sourceField="description" text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} />
                   ) : (
                     translateUi("No description yet.")
                   )}
@@ -465,13 +477,13 @@ export function ReferenceWorkspace(props: {
               )}
             </section>
           ) : null}
-          {isDeities ? (
+          {isDeities || selected.dmNotes ? (
             <section>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   {translateUi("DM Notes")}
                 </div>
-                {props.canEdit && !editingDmNotes ? (
+                {props.canEdit && isDeities && !editingDmNotes ? (
                   <button
                     type="button"
                     onClick={() => setEditingDmNotes(true)}
@@ -536,7 +548,7 @@ export function ReferenceWorkspace(props: {
                   }}
                 >
                   {selected.dmNotes ? (
-                    <MarkdownRichText text={selected.dmNotes} validMentionIds={validMentionIds} binderId={props.binderId} />
+                    <MarkdownRichText sourceField="dm_notes" text={selected.dmNotes} validMentionIds={validMentionIds} binderId={props.binderId} />
                   ) : (
                     translateUi("No DM notes yet.")
                   )}

@@ -1,3 +1,4 @@
+import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +12,7 @@ import {
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
-import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { WysiwygNoteEditor } from "@beholden/shared/ui";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
@@ -221,7 +222,8 @@ export function BinderLoreWorkspace(props: {
             if (props.type === "items") await deleteBinderItem(props.binderId, selected.id); else await deleteBinderEvent(props.binderId, selected.id);
             navigate(`/binder/${props.binderId}/${props.type}`); await reload(); await props.onRecordsChanged();
           }}>{translateUi("Delete")}</Button></div> : null}</header>
-        {"description" in selected && selected.description ? <MarkdownRichText text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} /> : null}
+        {"description" in selected && selected.description ? <MarkdownRichText sourceField="description" text={selected.description} validMentionIds={validMentionIds} binderId={props.binderId} /> : null}
+        {"dm_notes" in selected && selected.dm_notes ? <section><strong>{translateUi("DM Notes")}</strong><MarkdownRichText sourceField="dm_notes" text={selected.dm_notes} binderId={props.binderId} /></section> : null}
         <BacklinksPanel binderId={props.binderId} recordId={selected.id} />
       </article>
       {editor ? props.type === "items"

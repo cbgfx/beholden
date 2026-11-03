@@ -1,3 +1,4 @@
+import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { useRichTextDraft } from "./useRichTextDraft";
@@ -7,10 +8,11 @@ import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import type { Campaign } from "@/domain/types/domain";
 import { updateCampaignBinderContent } from "@/services/binderApi";
-import { MarkdownRichText, WysiwygNoteEditor } from "@beholden/shared/ui";
+import { WysiwygNoteEditor } from "@beholden/shared/ui";
 import { fetchBinderRecordOptions, type BinderRecordOption } from "@/services/binderLoreApi";
 
 function CampaignRichText(props: {
+  sourceField: string;
   label: string;
   value: string | null;
   accent: string;
@@ -47,7 +49,7 @@ function CampaignRichText(props: {
         </div>
       ) : (
         <div style={{ minHeight: 90, padding: "8px 2px", color: props.value ? theme.colors.text : theme.colors.muted, fontSize: "var(--fs-body)", lineHeight: 1.65 }}>
-          {props.value ? <MarkdownRichText text={props.value} binderId={props.binderId} /> : translateUi("No {{value1}} yet.", { value1: props.label.toLocaleLowerCase() })}
+          {props.value ? <MarkdownRichText sourceField={props.sourceField} text={props.value} binderId={props.binderId} /> : translateUi("No {{value1}} yet.", { value1: props.label.toLocaleLowerCase() })}
         </div>
       )}
     </section>
@@ -89,11 +91,11 @@ function CampaignWorkspaceContent(props: { binderId: string; campaign: Campaign;
         </div>
       </div>
       <div style={{ display: "grid", gap: 34 }}>
-        <CampaignRichText binderId={props.binderId} label={translateUi("Campaign Story")} value={story} accent={props.accent} mentions={mentions} onSave={async (campaignStory) => {
+        <CampaignRichText sourceField="campaign_story" binderId={props.binderId} label={translateUi("Campaign Story")} value={story} accent={props.accent} mentions={mentions} onSave={async (campaignStory) => {
           const result = await updateCampaignBinderContent(props.campaign.id, { campaignStory });
           setStory(result.campaignStory);
         }} />
-        <CampaignRichText binderId={props.binderId} label={translateUi("Campaign Notes")} value={notes} accent={props.accent} mentions={mentions} onSave={async (campaignNotes) => {
+        <CampaignRichText sourceField="campaign_notes" binderId={props.binderId} label={translateUi("Campaign Notes")} value={notes} accent={props.accent} mentions={mentions} onSave={async (campaignNotes) => {
           const result = await updateCampaignBinderContent(props.campaign.id, { campaignNotes });
           setNotes(result.campaignNotes);
         }} />

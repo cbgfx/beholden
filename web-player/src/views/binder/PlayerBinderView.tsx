@@ -1,3 +1,6 @@
+import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
+import { LocationMap } from "@beholden/shared/ui/LocationMap";
+import { PlayerBinderBacklinks } from "./PlayerBinderBacklinks";
 import { useWs } from "@/services/ws";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 import { CharacterRequirementsBadge } from "@/ui/CharacterRequirementsBadge";
@@ -9,7 +12,7 @@ import { GameIcon } from "@/icons/GameIcon";
 import { C } from "@/lib/theme";
 import { api, resolveAssetUrl } from "@/services/api";
 import { Button } from "@/ui/Button";
-import { BINDER_MORTAL_COLUMNS, BinderDataTableHeader, BinderDataTableRow, BinderDataTableThumbnail, ImageLightbox, MarkdownRichText, SearchableMultiFilter } from "@beholden/shared/ui";
+import { BINDER_MORTAL_COLUMNS, BinderDataTableHeader, BinderDataTableRow, BinderDataTableThumbnail, ImageLightbox, SearchableMultiFilter } from "@beholden/shared/ui";
 
 type Mortal = {
   id: string; name: string; mortalType: "npc" | "player_character";
@@ -28,7 +31,7 @@ type PlayerBinder = {
   deities: PublicRecord[];
   places: PublicRecord[];
 };
-type PublicRecord = { id: string; type: "deity" | "continent" | "country" | "location" | "poi"; name: string; description: string | null; rank: string | null; domains?: string[]; imageUrl: string | null; imageUpdatedAt: number | null; parentName: string | null; icon: string | null };
+type PublicRecord = { id: string; type: "deity" | "continent" | "country" | "location" | "poi"; name: string; description: string | null; rank: string | null; domains?: string[]; imageUrl: string | null; imageUpdatedAt: number | null; mapUpdatedAt?: number | null; parentName: string | null; icon: string | null };
 type MortalFilters = { position: string[]; organization: string[]; location: string[]; species: string[]; gender: string[]; status: string[] };
 const emptyFilters = (): MortalFilters => ({ position: [], organization: [], location: [], species: [], gender: [], status: [] });
 type MortalSortKey = "name" | "position" | "organization" | "location" | "species" | "age" | "gender" | "status";
@@ -107,6 +110,7 @@ export function PlayerBinderView() {
     setNavOpen(false);
     setSearchParams((prev) => {
       const updated = new URLSearchParams(prev);
+      for (const key of ["mentionTarget", "mentionField", "mentionOccurrence"]) updated.delete(key);
       updated.set("section", next);
       updated.delete("recordId");
       return updated;
@@ -115,6 +119,7 @@ export function PlayerBinderView() {
   const setSelectedId = (next: string | null) => {
     setSearchParams((prev) => {
       const updated = new URLSearchParams(prev);
+      for (const key of ["mentionTarget", "mentionField", "mentionOccurrence"]) updated.delete(key);
       if (next) updated.set("recordId", next); else updated.delete("recordId");
       return updated;
     });
@@ -303,7 +308,7 @@ export function PlayerBinderView() {
                     <h2>{t("Campaign Story")}</h2>
                     <div style={{ lineHeight: 1.65, color: selectedCampaign.story ? C.text : C.muted }}>
                       {selectedCampaign.story ? (
-                        <MarkdownRichText text={selectedCampaign.story} binderId={data.binder.id} />
+                        <MarkdownRichText sourceField="campaign_story" text={selectedCampaign.story} binderId={data.binder.id} />
                       ) : (
                         t("No campaign story yet.")
                       )}
@@ -414,6 +419,12 @@ export function PlayerBinderView() {
                         </div>
                       </section>
                     ) : null}
+                    {selectedPublicRecord.type === "location" && selectedPublicRecord.mapUpdatedAt ? <LocationMap
+                      key={selectedPublicRecord.id}
+                      name={selectedPublicRecord.name}
+                      endpoint={`/api/binders/${data.binder.id}/locations/${selectedPublicRecord.id}/map`}
+                      updatedAt={selectedPublicRecord.mapUpdatedAt}
+                    /> : null}
                     <section>
                       <div
                         style={{
@@ -429,7 +440,7 @@ export function PlayerBinderView() {
                       </div>
                       <div style={{ minHeight: 72, padding: "8px 9px", color: selectedPublicRecord.description ? C.text : C.muted, lineHeight: 1.55 }}>
                         {selectedPublicRecord.description ? (
-                          <MarkdownRichText text={selectedPublicRecord.description} binderId={data.binder.id} />
+                          <MarkdownRichText sourceField="description" text={selectedPublicRecord.description} binderId={data.binder.id} />
                         ) : (
                           t("No description yet.")
                         )}
@@ -469,10 +480,7 @@ export function PlayerBinderView() {
                         <div style={{ marginTop: 7 }}>{selectedPublicRecord.parentName}</div>
                       </section>
                     ) : null}
-                    <section style={{ paddingTop: 20, borderTop: "1px solid rgba(255,255,255,.09)" }}>
-                      <h3 style={{ margin: 0 }}>{t("Mentioned in")}</h3>
-                      <div style={{ marginTop: 13, color: C.muted }}>{t("Not specified")}</div>
-                    </section>
+                    <PlayerBinderBacklinks characterId={id} binderId={data.binder.id} targetId={selectedPublicRecord.id} mortals={data.mortals} campaigns={data.campaigns} records={[...data.deities, ...data.places]} />
                   </div>
                 </article>
               </>
@@ -700,10 +708,11 @@ export function PlayerBinderView() {
                     <section style={{ marginTop: 24 }}>
                       <h3>{t(selected.mortalType === "player_character" ? "Biography" : "Notes")}</h3>
                       <div style={{ lineHeight: 1.65 }}>
-                        <MarkdownRichText text={selected.description || selected.backstory || ""} binderId={data.binder.id} />
+                        <MarkdownRichText sourceField="description" text={selected.description || selected.backstory || ""} binderId={data.binder.id} />
                       </div>
                     </section>
                   ) : null}
+<PlayerBinderBacklinks characterId={id} binderId={data.binder.id} targetId={selected.id} mortals={data.mortals} campaigns={data.campaigns} records={[...data.deities, ...data.places]} />
                 </div>
               </article>
             </>

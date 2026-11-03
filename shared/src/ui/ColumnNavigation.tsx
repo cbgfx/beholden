@@ -53,6 +53,15 @@ export function sheetColumnPresentation(view: ColumnView, index: number) {
   };
 }
 
+/**
+ * Whether a column shows its heading. On narrow screens it always does, because only one column is
+ * visible at a time. On desktop it appears only for a column the user has named: the default name
+ * just repeats the first panel's title, and a custom icon alone is meant for the narrow tab bar.
+ */
+export function showsColumnHeading(view: Pick<ColumnView, "columnHeaders">, index: number, opts: { compact: boolean; editing: boolean }) {
+  return opts.compact || opts.editing || Boolean(view.columnHeaders?.[index]?.name);
+}
+
 export function ColumnHeading({
   view,
   index,

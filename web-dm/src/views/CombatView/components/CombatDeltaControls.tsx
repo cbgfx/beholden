@@ -138,13 +138,14 @@ export function CombatDeltaControls(props: Props) {
     setLastRoll(result);
     if (flashRef.current) window.clearTimeout(flashRef.current);
     flashRef.current = window.setTimeout(() => setLastRoll(null), 1600);
-    inputRef.current?.focus();
+    if (!compact) inputRef.current?.focus();
     return resolvedValue;
-  }, [value, onChange]);
+  }, [value, onChange, compact]);
 
   // When a new target is selected, snap focus back to the input for fast table flow.
   React.useEffect(() => {
-    if (disabled) return;
+    // Mobile selection must not summon the keyboard; users tap the field when they want it.
+    if (compact || disabled) return;
     if (!props.targetId) return;
     const raf = requestAnimationFrame(() => {
       const el = document.activeElement as HTMLElement | null;
@@ -156,10 +157,10 @@ export function CombatDeltaControls(props: Props) {
           (el as any).isContentEditable;
         if (isTextField) return;
       }
-      inputRef.current?.focus();
+      if (!compact) inputRef.current?.focus();
     });
     return () => cancelAnimationFrame(raf);
-  }, [props.targetId, disabled]);
+  }, [props.targetId, disabled, compact]);
 
   return (
     <>
@@ -259,7 +260,7 @@ export function CombatDeltaControls(props: Props) {
           disabled={bulkMode ? bulkCount === 0 : disabled}
           onClick={() => {
             props.onApplyDamage();
-            inputRef.current?.focus();
+            if (!compact) inputRef.current?.focus();
           }}
           variant="damage"
         >
@@ -372,7 +373,7 @@ export function CombatDeltaControls(props: Props) {
           disabled={bulkMode ? bulkCount === 0 : disabled}
           onClick={() => {
             props.onApplyHeal();
-            inputRef.current?.focus();
+            if (!compact) inputRef.current?.focus();
           }}
           variant="heal"
         >
@@ -386,7 +387,7 @@ export function CombatDeltaControls(props: Props) {
             disabled={disabled}
             onClick={() => {
               props.onOpenConditions?.();
-              inputRef.current?.focus();
+              if (!compact) inputRef.current?.focus();
             }}
             variant="neutral"
           >

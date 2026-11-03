@@ -13,6 +13,7 @@ import {
 } from "@/views/character/CharacterViewColumns";
 import { MOVABLE_PANEL_IDS, PANEL_IDS, type PanelColorSettings, type PanelId, type SheetViewDef } from "@/views/character/layout/panelRegistry";
 import { CharacterColumnHeading, CharacterColumnTabs, useSheetColumnNavigation } from "./layout/CharacterColumnNavigation";
+import { showsColumnHeading } from "@beholden/shared/ui/ColumnNavigation";
 import { DEFAULT_SHEET_VIEWS } from "@/views/character/layout/defaultSheetViews";
 import { CharacterSheetHeader } from "@/views/character/CharacterSheetHeader";
 import { abilityMod, formatModifier } from "@/views/character/CharacterSheetUtils";
@@ -564,9 +565,7 @@ export function CharacterViewLayout({ model }: { model: CharacterViewModel }) {
                     : null),
                 }}
               >
-                {/* On desktop a heading only appears for a column the player has named. The default name just
-                    repeats the first panel's title, and a custom icon alone is for the phone tab bar. */}
-                {(phone || layoutEditMode || activeView.columnHeaders?.[columnIndex]?.name) ?<CharacterColumnHeading view={activeView} index={columnIndex} editing={layoutEditMode} accent={derived.accentColor} onChange={(header) => persistActiveView((view) => ({ ...view, columnHeaders: Array.from({ length: view.columns }, (_, index) => index === columnIndex ? header : view.columnHeaders?.[index] ?? {}) }))} /> : null}
+                {showsColumnHeading(activeView, columnIndex, { compact: phone, editing: layoutEditMode }) ? <CharacterColumnHeading view={activeView} index={columnIndex} editing={layoutEditMode} accent={derived.accentColor} onChange={(header) => persistActiveView((view) => ({ ...view, columnHeaders: Array.from({ length: view.columns }, (_, index) => index === columnIndex ? header : view.columnHeaders?.[index] ?? {}) }))} /> : null}
                 {phone && columnIndex > 0 && columnIds.length === 0 ? <div style={{ color: C.muted, padding: "12px 4px" }}>{translateUi("No panels in this column.")}</div> : null}
                 {columnIndex === 0 && (
                   <div style={panelStyle(PANEL_IDS.combatStats)}>

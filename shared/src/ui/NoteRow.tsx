@@ -25,6 +25,11 @@ const deletedMentionStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+function mentionIdFromHref(href: string): string | undefined {
+  try { return decodeURIComponent(href.slice(href.lastIndexOf("/") + 1).split(/[?#]/)[0]!); }
+  catch { return undefined; }
+}
+
 function renderInlineRichText(text: string, validMentionIds?: Set<string>, binderId?: string, deletedRecordLabel = "Deleted record"): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   const pattern = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*)/g;
@@ -46,13 +51,13 @@ function renderInlineRichText(text: string, validMentionIds?: Set<string>, binde
         ? rawHref.replace(/^\/binder\/[^/]+/, `/binder/${binderId}`)
         : rawHref;
       const isMention = href?.startsWith("/binder/");
-      const mentionId = isMention ? href!.slice(href!.lastIndexOf("/") + 1) : undefined;
+      const mentionId = isMention ? mentionIdFromHref(href!) : undefined;
       const isDeletedMention = isMention && validMentionIds && !validMentionIds.has(mentionId!);
       nodes.push(href
         ? isDeletedMention
           ? <span key={`d-${key++}`} title={deletedRecordLabel} style={deletedMentionStyle}>{link[1]}</span>
           : isMention
-            ? <Link key={`m-${key++}`} to={href} style={mentionLinkStyle}>{link[1]}</Link>
+            ? <Link key={`m-${key++}`} to={href} data-binder-record-id={mentionId} style={mentionLinkStyle}>{link[1]}</Link>
             : <a key={`a-${key++}`} href={href} rel="noreferrer" style={{ color: "currentColor", textDecoration: "underline" }}>{link[1]}</a>
         : <React.Fragment key={`raw-${key++}`}>{link[1]}</React.Fragment>);
     } else if (token.startsWith("**") && token.endsWith("**")) {

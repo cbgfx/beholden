@@ -86,7 +86,7 @@ export function ModalFrame(props: {
       dialog.current
     )?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (openModals.at(-1) !== key) return;
+      if (event.defaultPrevented || openModals.at(-1) !== key) return;
       if (event.key === "Escape") {
         event.stopImmediatePropagation();
         closeRef.current();
@@ -119,9 +119,9 @@ export function ModalFrame(props: {
         first?.focus();
       }
     };
-    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("keydown", onKey);
       openModals.splice(openModals.indexOf(key), 1);
       if (!openModals.length)
         document.body.style.overflow = previousBodyOverflow;

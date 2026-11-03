@@ -9,6 +9,8 @@ import { BinderCard } from "@/views/HomeView/BinderCard";
 import type { CampaignSummary } from "@/views/HomeView/CampaignCard";
 import type { BinderSummary } from "@/services/binderApi";
 import { importBinder, previewBinderImport, type BinderImportPreview } from "@/services/binderApi";
+import type { CampaignImportPreview } from "@beholden/shared/api/campaignImport.ts";
+import { CampaignImportReview } from "./HomeView/CampaignImportReview";
 
 type HomeBinderSummary = BinderSummary & { canEdit: boolean };
 
@@ -96,6 +98,7 @@ export function HomeView({
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState("");
   const [importFailed, setImportFailed] = useState(false);
+  const [campaignPreview, setCampaignPreview] = useState<CampaignImportPreview | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [binderImportFile, setBinderImportFile] = useState<File | null>(null);
   const [binderImportBusy, setBinderImportBusy] = useState(false);
@@ -104,7 +107,7 @@ export function HomeView({
   const [binderPreview, setBinderPreview] = useState<BinderImportPreview | null>(null);
   const binderFileInputRef = useRef<HTMLInputElement>(null);
 
-  async function importCampaign() {
+  async function importCampaign(confirm = false) {
     if (!importFile) return;
     setImportBusy(true);
     setImportMsg("");
@@ -112,7 +115,14 @@ export function HomeView({
     try {
       const fd = new FormData();
       fd.append("file", importFile);
+      if (!confirm) {
+        setCampaignPreview(await api<CampaignImportPreview>("/api/campaigns/import/preview", { method: "POST", body: fd }));
+        return;
+      }
+      if (!campaignPreview) return;
+      if (campaignPreview.existingName !== null) fd.append("replaceCampaignId", campaignPreview.campaignId);
       await api<unknown>("/api/campaigns/import", { method: "POST", body: fd });
+      setCampaignPreview(null);
       setImportMsg("Campaign imported — it now appears below.");
       setImportFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -217,6 +227,7 @@ export function HomeView({
             <input
               ref={fileInputRef}
               type="file"
+              disabled={importBusy}
               accept=".json,application/json"
               onChange={(event) => {
                 setImportFile(event.target.files?.[0] ?? null);
@@ -230,11 +241,11 @@ export function HomeView({
 
           <Button
             variant="ghost"
-            onClick={importCampaign}
+            onClick={() => void importCampaign()}
             disabled={!importFile || importBusy}
             title={translateUi("Import selected campaign file")}
           >
-            {importBusy ? translateUi("Importing…") : translateUi("Import")}
+            {importBusy ? translateUi("Importing…") : translateUi("Preview import")}
           </Button>
 
           {importMsg ? (
@@ -357,6 +368,13 @@ export function HomeView({
           </div>
         )}
       </div>
+      {campaignPreview && <CampaignImportReview
+        preview={campaignPreview}
+        busy={importBusy}
+        error={importFailed ? importMsg : ""}
+        onClose={() => setCampaignPreview(null)}
+        onConfirm={() => void importCampaign(true)}
+      />}
     </div>
   );
 }

@@ -40,6 +40,7 @@ it("collapses navigation, opens a mortal and supports browser Back without losin
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(search, "Hero"); search.dispatchEvent(new Event("input", { bubbles: true })); });
   expect(button("Hero").textContent).toContain("Mage");
   await click("Hero"); expect(router.state.location.search).toContain("recordId=hero");
+  expect(host.textContent).toContain("Mentioned in");
   await act(async () => router.navigate(-1));
   expect(host.querySelector<HTMLInputElement>('input[placeholder^="Search mortals"]')!.value).toBe("Hero");
   await resize(false); expect(host.innerHTML).toContain("1160px");

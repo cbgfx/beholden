@@ -1,3 +1,4 @@
+import { binderBacklinks } from "../../services/binders/backlinks.js";
 import type { Express } from "express";
 import { z } from "zod";
 import type { ServerContext } from "../../server/context.js";
@@ -188,22 +189,9 @@ export function registerBinderLoreRoutes(app: Express, ctx: ServerContext) {
     const binderId = requireParam(req, res, "binderId");
     const recordId = requireParam(req, res, "recordId");
     if (!binderId || !recordId) return;
-    const rows = ctx.db.prepare(`
-      SELECT br.id AS source_record_id, br.name AS source_name, br.record_type AS source_type,
-             GROUP_CONCAT(DISTINCT m.source_field) AS fields
-      FROM binder_record_mentions m
-      JOIN binder_records br ON br.id = m.source_record_id AND br.binder_id = ?
-      WHERE m.target_record_id = ?
-      GROUP BY br.id
-      ORDER BY br.name COLLATE NOCASE
-    `).all(binderId, recordId) as Array<{ source_record_id: string; source_name: string; source_type: string; fields: string }>;
-    res.json(rows.map((row) => ({
-      id: row.source_record_id,
-      name: row.source_name,
-      type: row.source_type,
-      route: routeFor(row.source_type, binderId, row.source_record_id),
-      fields: row.fields.split(","),
-    })));
+    const target = ctx.db.prepare("SELECT id FROM binder_records WHERE binder_id=? AND id=?").get(binderId, recordId);
+    if (!target) return res.status(404).json({ ok: false, message: "Binder record not found" });
+    res.json(binderBacklinks(ctx.db, binderId, recordId, routeFor, req.user!));
   });
 
   // MARK: - PUT /api/binders/:binderId/mentions

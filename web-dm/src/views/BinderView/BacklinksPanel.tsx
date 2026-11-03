@@ -1,39 +1,52 @@
-import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { theme } from "@/theme/theme";
-import { fetchBinderBacklinks, type BinderBacklink } from "@/services/binderLoreApi";
-import { Button } from "@/ui/Button";
-
-const FIELD_LABELS: Record<string, string> = {
-  description: "Description",
-  dm_notes: "DM Notes",
-};
+import { useEffect, useState } from "react";
+import { BacklinkList } from "@beholden/shared/ui/BacklinkList";
+import {
+  fetchBinderBacklinks,
+  type BinderBacklink,
+} from "@/services/binderLoreApi";
 
 export function BacklinksPanel(props: { binderId: string; recordId: string }) {
-  const translateUi = useUiTranslation("dmUi");
-  const navigate = useNavigate();
+  return (
+    <BacklinksContent key={`${props.binderId}:${props.recordId}`} {...props} />
+  );
+}
+
+function BacklinksContent({
+  binderId,
+  recordId,
+}: {
+  binderId: string;
+  recordId: string;
+}) {
   const [rows, setRows] = useState<BinderBacklink[]>([]);
-  const reload = useCallback(async () => setRows(await fetchBinderBacklinks(props.binderId, props.recordId)), [props.binderId, props.recordId]);
-  useEffect(() => { void reload(); }, [reload]);
-  return <section style={{ borderTop: `1px solid ${theme.colors.panelBorder}`, paddingTop: 16, display: "grid", gap: 10 }}>
-    <strong>{translateUi("Mentioned in")}</strong>
-    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-      {rows.map((row) => (
-        <Button
-          key={row.id}
-          type="button"
-          variant="ghost"
-          onClick={() => navigate(row.route)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "5px 8px", borderRadius: 7, font: "inherit" }}
-        >
-          <b>{row.name}</b>
-          <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)" }}>
-            {row.fields.map((field) => FIELD_LABELS[field] ?? field).join(", ")}
-          </span>
-        </Button>
-      ))}
-      {!rows.length ? <span style={{ color: theme.colors.muted }}>{translateUi("None")}</span> : null}
-    </div>
-  </section>;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+    void fetchBinderBacklinks(binderId, recordId)
+      .then((next) => {
+        if (active) setRows(next);
+      })
+      .catch(() => {
+        if (active) setError("Could not load backlinks.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [binderId, recordId, retry]);
+  return (
+    <BacklinkList
+      rows={rows}
+      targetId={recordId}
+      loading={loading}
+      error={error}
+      onRetry={() => setRetry((value) => value + 1)}
+    />
+  );
 }
