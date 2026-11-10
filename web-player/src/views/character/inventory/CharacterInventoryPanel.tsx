@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { ModalFrame } from "@beholden/shared/ui/ModalFrame";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { C } from "@/lib/theme";
 import { IconKnapsack } from "@/icons";
@@ -73,6 +74,8 @@ export function InventoryPanel({
 }) {
   const t = useUiTranslation("playerUi");
   const [selectedStashItem, setSelectedStashItem] = useState<PartyStashItem | null>(null);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const deletingRef = useRef(false);
   const sync = useCharacterInventorySync({
     inventoryRev,
     inventory: charData?.inventory,
@@ -110,13 +113,22 @@ export function InventoryPanel({
     cycleMainHand: runRow(itemActions.cycleMainHand),
     toggleOffhand: runRow(itemActions.toggleOffhand),
     toggleWorn: runRow(itemActions.toggleWorn),
-    removeItem: runRow(itemActions.removeItem),
+    removeItem: runRow((id: string) => {
+      const item = sync.items.find((entry) => entry.id === id);
+      if (!item) return;
+      if (["uncommon", "rare", "very rare", "legendary", "artifact"].includes((item.rarity ?? "").trim().toLowerCase())) {
+        setDeleteItemId(id);
+        return;
+      }
+      return itemActions.removeItem(id);
+    }),
     changeQty: runRow(itemActions.changeQty),
     linkAmmo: runRow(itemActions.linkAmmo),
     reorderItemsByIds: runRow(itemActions.reorderItemsByIds),
   };
 
   const partyCapacityLbs = sync.partyCapacityLbs;
+  const deleteItem = sync.items.find((item) => item.id === deleteItemId);
 
   const ammoItems = sync.items.filter(isAmmunitionItem);
   const hasHexWarrior = (charData?.classes ?? []).some((entry) => /hexblade/i.test(String(entry.subclass ?? "")));
@@ -130,6 +142,22 @@ export function InventoryPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <ModalFrame isOpen={Boolean(deleteItem)} title={t("Delete item?")} width={440} height="auto" onClose={() => setDeleteItemId(null)}>
+        <div style={{ padding: 16 }}>
+          <p style={{ margin: "0 0 16px", lineHeight: 1.6, color: C.text }}>
+            {t("Delete {{name}} from your inventory? This removes the entire stack and cannot be undone.", { name: deleteItem?.name ?? "" })}
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button type="button" variant="ghost" onClick={() => setDeleteItemId(null)}>{t("Cancel")}</Button>
+            <Button type="button" variant="danger" onClick={() => {
+              if (!deleteItem || deletingRef.current) return;
+              deletingRef.current = true;
+              setDeleteItemId(null);
+              void runRow(itemActions.removeItem)(deleteItem.id).finally(() => { deletingRef.current = false; });
+            }}>{t("Delete")}</Button>
+          </div>
+        </div>
+      </ModalFrame>
       <CollapsiblePanel
         title={<>{t("Inventory")}{sync.saving && <span style={{ fontSize: "var(--fs-tiny)", color: C.muted, marginLeft: 6, fontWeight: 400, textTransform: "none" }}>{t("saving…")}</span>}</>}
         color={accentColor}

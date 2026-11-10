@@ -89,6 +89,11 @@ export function AboutView(props: InfoViewProps) {
           {translateUi(
             "Beholden is an offline-friendly campaign tracker for tabletop RPGs who'd rather spend game night actually playing than wrestling with 20 tabs. It focuses on fast table flow whether you are running the world or tracking how you will collect a goblin's head. Beholden is designed to stay out of the way and let you focus on the game while rolling REAL dice. It is not a VTT.",
           )}
+          <p>
+            <a href="https://github.com/cbgfx/beholden" target="_blank" rel="noreferrer">
+              GitHub
+            </a>
+          </p>
         </div>
       </PanelComponent>
 
