@@ -1,6 +1,6 @@
 import type React from "react";
 import { patchMyCharacter, putMyCharacter } from "@/views/character/state/characterApi";
-import { hasDiceTerm } from "@/lib/dice";
+import { hasDiceTerm } from "@beholden/shared/domain/dice";
 import { parseCharacterHpDelta } from "@/views/character/combat/CharacterHpDelta";
 import type { Character, PolymorphConditionData, SheetOverrides } from "@/views/character/CharacterViewHelpers";
 import { concentrationSaveDc } from "@beholden/shared/domain";

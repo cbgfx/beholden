@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Express } from "express";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../lib/validate.js";
-import { hashPassword, hashPasswordAsync, verifyPasswordAsync } from "../lib/jwtAuth.js";
+import { hashPassword, hashPasswordAsync, verifyPasswordAsync } from "../lib/passwords.js";
 import { requireAuth } from "../middleware/auth.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
 import { registerWorkspacePreferences } from "./workspacePreferences.js";
@@ -66,13 +66,6 @@ export function registerAuthRoutes(app: Express, ctx: ServerContext) {
         textScale: Number(row.text_scale ?? 1),
       },
     });
-  });
-
-  app.post("/api/auth/migrate", requireAuth, (req, res) => {
-    const session = createSession(db, req.user!.userId);
-    setSessionCookie(req, res, session.token);
-    res.setHeader("Cache-Control", "no-store");
-    res.json({ ok: true, csrfToken: session.csrfToken });
   });
 
   app.post("/api/auth/logout", requireAuth, (req, res) => {

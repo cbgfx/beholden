@@ -33,7 +33,6 @@ const child = spawn(process.execPath, [path.join(repo, "server/dist/runtime/main
     BEHOLDEN_DB_PATH: path.join(directory, "smoke.db"),
     BEHOLDEN_ADMIN_USER: "smoke-admin",
     BEHOLDEN_ADMIN_PASS: "smoke-test-password",
-    BEHOLDEN_JWT_SECRET: "isolated-production-smoke-test-signing-key",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });

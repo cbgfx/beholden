@@ -1,6 +1,6 @@
 import * as React from "react";
 import { api } from "@/services/api";
-import type { MonsterDetail, SpellDetail } from "@/views/CombatView/types";
+import type { MonsterDetail, SpellDetail } from "@/domain/types/compendium";
 import { parseMonsterSpells, sortSpellNames } from "@/views/CombatView/utils/spells";
 
 type SpellSummaryLite = { id: string; name: string; level: number | null };

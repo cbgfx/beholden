@@ -59,21 +59,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [clearLocal]);
 
-  // On mount, migrate a legacy bearer token once, then use the HttpOnly session cookie.
+  // On mount, ask the server who the HttpOnly session cookie belongs to.
   useEffect(() => {
     let cancelled = false;
     const startedAt = revision.current;
     const isCurrent = () => !cancelled && startedAt === revision.current;
     setIsLoading(true);
-    const legacyToken = localStorage.getItem(TOKEN_KEY);
+    // A bearer token left by a pre-session build is useless now (the server stopped accepting them),
+    // so it is dropped rather than migrated. Its owner simply signs in again.
+    localStorage.removeItem(TOKEN_KEY);
     const establish = async () => {
-      if (legacyToken) {
-        const migrated = await apiRaw<{ csrfToken: string }>("/api/auth/migrate", {
-          method: "POST", headers: { Authorization: `Bearer ${legacyToken}` },
-        });
-        localStorage.setItem(CSRF_STORAGE_KEY, migrated.csrfToken);
-        localStorage.removeItem(TOKEN_KEY);
-      }
       const current = await apiRaw<AuthUser & { csrfToken?: string }>("/api/auth/me");
       if (current.csrfToken) localStorage.setItem(CSRF_STORAGE_KEY, current.csrfToken);
       return current;

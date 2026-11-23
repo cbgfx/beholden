@@ -2,7 +2,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import type { IncomingMessage } from "node:http";
 import type { Request, Response } from "express";
 import type { Db } from "./db.js";
-import type { JwtPayload } from "./jwtAuth.js";
+import type { AuthUser } from "../middleware/auth.js";
 import { trustProxyHeadersEnabled } from "../server/security.js";
 
 const SESSION_COOKIE = "beholden_session";
@@ -54,7 +54,7 @@ export function createSession(db: Db, userId: string, now = Date.now()): { id: s
   return { id, token, csrfToken, expiresAt };
 }
 
-export function currentSessionUser(db: Db, req: Pick<IncomingMessage, "headers">, now = Date.now()): (JwtPayload & { sessionId: string; csrfHash: string }) | null {
+export function currentSessionUser(db: Db, req: Pick<IncomingMessage, "headers">, now = Date.now()): (AuthUser & { sessionId: string; csrfHash: string }) | null {
   const token = cookieValue(req.headers.cookie, SESSION_COOKIE);
   if (!token) return null;
   const row = db.prepare(`SELECT s.id AS session_id,s.csrf_hash,s.last_seen_at,u.id,u.username,u.is_admin

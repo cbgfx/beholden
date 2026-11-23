@@ -1,34 +1,35 @@
 // server/src/middleware/auth.ts
-// Express middleware for cookie sessions, legacy-token migration, and admin authorization.
+// Express middleware for cookie sessions and admin authorization.
 
 import type { Request, Response, NextFunction } from "express";
-import { verifyToken, currentTokenUser, type JwtPayload } from "../lib/jwtAuth.js";
 import type { Db } from "../lib/db.js";
 import { CSRF_HEADER, currentSessionUser, sessionCsrfMatches } from "../lib/sessionAuth.js";
+
+/** Who is making a request, as established by their session. */
+export interface AuthUser {
+  userId: string;
+  username: string;
+  isAdmin: boolean;
+}
 
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: AuthUser;
       authSessionId?: string;
       authCsrfHash?: string;
     }
   }
 }
 
+/**
+ * Per-route guard: passes once requireCurrentAccount (mounted on all of /api) has identified the
+ * caller. It no longer reads a token itself - the Authorization: Bearer path it used to accept is
+ * gone (see lib/passwords.ts for why), so a request is either on a session or not signed in.
+ */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.user) return next();
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ ok: false, message: "Unauthorized" });
-  }
-  const token = authHeader.slice(7);
-  const payload = verifyToken(token);
-  if (!payload) {
-    return res.status(401).json({ ok: false, message: "Invalid or expired token" });
-  }
-  req.user = payload;
-  next();
+  return res.status(401).json({ ok: false, message: "Unauthorized" });
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
@@ -51,26 +52,25 @@ export function requireAnyDm(db: Db) {
   };
 }
 
-/** Production HTTP authorization shares credential revocation with WebSockets. */
+/**
+ * The /api gatekeeper: identifies the caller from their session cookie and, for anything that
+ * changes state, requires the matching CSRF header. WebSockets authorize through the same session
+ * lookup, so revoking a session or changing a password ends both at once.
+ */
 export function requireCurrentAccount(db: Db) {
   return (req: Request, res: Response, next: NextFunction) => {
     const sessionUser = currentSessionUser(db, req);
-    if (sessionUser) {
-      req.user = sessionUser;
-      req.authSessionId = sessionUser.sessionId;
-      req.authCsrfHash = sessionUser.csrfHash;
-      if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !sessionCsrfMatches(sessionUser.csrfHash, req.headers[CSRF_HEADER])) {
-        res.status(403).json({ ok: false, code: "invalid-csrf", message: "The session security token is missing or expired. Reload and try again." });
-        return;
-      }
-      next();
+    if (!sessionUser) {
+      res.status(401).json({ ok: false, message: "Session expired. Please sign in again." });
       return;
     }
-    requireAuth(req, res, () => {
-    const user = currentTokenUser(db, req.user ?? null);
-    if (!user) { res.status(401).json({ message: "Session expired. Please sign in again." }); return; }
-    req.user = user;
+    req.user = { userId: sessionUser.userId, username: sessionUser.username, isAdmin: sessionUser.isAdmin };
+    req.authSessionId = sessionUser.sessionId;
+    req.authCsrfHash = sessionUser.csrfHash;
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !sessionCsrfMatches(sessionUser.csrfHash, req.headers[CSRF_HEADER])) {
+      res.status(403).json({ ok: false, code: "invalid-csrf", message: "The session security token is missing or expired. Reload and try again." });
+      return;
+    }
     next();
-    });
   };
 }

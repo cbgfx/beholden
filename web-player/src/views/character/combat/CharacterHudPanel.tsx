@@ -2,7 +2,7 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { SHARED_CONDITION_DEFS } from "@beholden/shared/domain";
 import { C } from "@/lib/theme";
-import { sanitizeDiceInput } from "@/lib/dice";
+import { sanitizeDiceInput } from "@beholden/shared/domain/dice";
 import { api } from "@/services/api";
 import { IconAttack, IconConditionByKey, IconConditions, IconHeal, IconHeart } from "@/icons";
 import { HexBtn, Panel } from "@/views/character/CharacterViewParts";

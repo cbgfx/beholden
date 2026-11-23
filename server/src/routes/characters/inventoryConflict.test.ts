@@ -19,8 +19,7 @@ import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
-import { signToken } from "../../lib/jwtAuth.js";
-import { requireAuth } from "../../middleware/auth.js";
+import { signToken, testAuth } from "../../tests/helpers/testAuth.js";
 import { zodErrorMiddleware } from "../../lib/validate.js";
 import { registerCharacterRoutes } from "./core.js";
 import { ensureCharacterCreationTokenColumn } from "../../lib/migrations/characterCreationTokenMigration.js";
@@ -108,7 +107,7 @@ describe("character inventory saves: optimistic concurrency (inventoryRev)", () 
 
     const app = express();
     app.use(express.json());
-    app.use("/api", requireAuth);
+    app.use("/api", testAuth);
     registerCharacterRoutes(app, ctx);
     app.use(zodErrorMiddleware);
 

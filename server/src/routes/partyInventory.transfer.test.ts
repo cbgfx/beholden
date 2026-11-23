@@ -22,8 +22,7 @@ import path from "node:path";
 import { rowToPartyInventoryItem } from "../lib/dbConverters.js";
 import { toPartyInventoryItemDto } from "../lib/apiCollections.js";
 import { SCHEMA_SQL } from "../lib/dbSchema.js";
-import { signToken } from "../lib/jwtAuth.js";
-import { requireAuth } from "../middleware/auth.js";
+import { signToken, testAuth } from "../tests/helpers/testAuth.js";
 import { zodErrorMiddleware } from "../lib/validate.js";
 import { registerPartyInventoryRoutes } from "./partyInventory.js";
 import { inventoryRevOf } from "./characters/helpers.js";
@@ -169,7 +168,7 @@ describe("party-stash transfer: atomic character <-> stash moves", () => {
 
     const app = express();
     app.use(express.json());
-    app.use("/api", requireAuth);
+    app.use("/api", testAuth);
     registerPartyInventoryRoutes(app, ctx);
     app.use(zodErrorMiddleware);
 

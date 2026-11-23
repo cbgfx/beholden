@@ -3,7 +3,7 @@ import React from "react";
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { SectionTitle } from "@/ui/SectionTitle";
 import { theme } from "@/theme/theme";
-import type { Bastion, CompendiumFacility } from "@/tools/bastions/types";
+import type { Bastion, CompendiumFacility } from "@beholden/shared/api/bastions";
 import { chipButtonStyle } from "@/tools/bastions/styles";
 import { selectedHirelingsTotal, selectedSpecialUsage } from "@/tools/bastions/metrics";
 import { CommittedCountInput, CommittedTextArea } from "@/tools/bastions/CommittedFields";

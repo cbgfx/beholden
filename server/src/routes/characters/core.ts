@@ -200,13 +200,15 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
              position_details.icon AS positionIcon
       FROM mortals m
       JOIN binder_records br ON br.id=m.id
-      LEFT JOIN binder_records race ON race.id=m.race_id
-      LEFT JOIN binder_records location ON location.id=m.residence_record_id
+      -- A public mortal can point at records the DM has kept hidden (a secret hideout, a cult).
+      -- Each related record is joined only when it is public itself, or its name would leak here.
+      LEFT JOIN binder_records race ON race.id=m.race_id AND race.visibility='public'
+      LEFT JOIN binder_records location ON location.id=m.residence_record_id AND location.visibility='public'
       LEFT JOIN organization_memberships membership ON membership.mortal_id=m.id AND membership.is_primary=1
-      LEFT JOIN binder_records organization ON organization.id=membership.organization_id
-      LEFT JOIN binder_organizations organization_details ON organization_details.id=membership.organization_id
-      LEFT JOIN binder_records position ON position.id=m.position_id
-      LEFT JOIN binder_positions position_details ON position_details.id=m.position_id
+      LEFT JOIN binder_records organization ON organization.id=membership.organization_id AND organization.visibility='public'
+      LEFT JOIN binder_organizations organization_details ON organization_details.id=organization.id
+      LEFT JOIN binder_records position ON position.id=m.position_id AND position.visibility='public'
+      LEFT JOIN binder_positions position_details ON position_details.id=position.id
       WHERE br.binder_id=? AND (br.visibility='public' OR m.id=?)
       ORDER BY br.name_key, br.id
     `).all(access.binderId, access.linkedMortalId) as Array<Record<string, unknown>>;
@@ -227,7 +229,7 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
              CASE WHEN br.record_type='deity' THEN (
                SELECT GROUP_CONCAT(domain_record.name, '||')
                FROM deity_domains dd
-               JOIN binder_records domain_record ON domain_record.id=dd.domain_id
+               JOIN binder_records domain_record ON domain_record.id=dd.domain_id AND domain_record.visibility='public'
                WHERE dd.deity_id=br.id
                ORDER BY domain_record.name_key
              ) END AS domains,
@@ -239,9 +241,10 @@ export function registerCharacterRoutes(app: Express, ctx: ServerContext) {
       LEFT JOIN binder_countries country ON country.id=br.id
       LEFT JOIN binder_locations location ON location.id=br.id
       LEFT JOIN binder_points_of_interest poi ON poi.id=br.id
-      LEFT JOIN binder_records country_parent ON country_parent.id=country.continent_id
-      LEFT JOIN binder_records location_parent ON location_parent.id=location.country_id
-      LEFT JOIN binder_records poi_parent ON poi_parent.id=COALESCE(poi.location_id,poi.country_id,poi.parent_poi_id)
+      -- Parent names follow the same rule as the mortals above: only public parents are named.
+      LEFT JOIN binder_records country_parent ON country_parent.id=country.continent_id AND country_parent.visibility='public'
+      LEFT JOIN binder_records location_parent ON location_parent.id=location.country_id AND location_parent.visibility='public'
+      LEFT JOIN binder_records poi_parent ON poi_parent.id=COALESCE(poi.location_id,poi.country_id,poi.parent_poi_id) AND poi_parent.visibility='public'
       WHERE br.binder_id=? AND br.visibility='public'
         AND br.record_type IN ('deity','continent','country','location','poi')
       ORDER BY br.record_type,br.name_key,br.id

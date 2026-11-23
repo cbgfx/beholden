@@ -1,7 +1,7 @@
 import { C } from "@/lib/theme";
 import { IconBastions } from "@beholden/shared/icons";
 import { HeaderActionLink, SectionTitle } from "@beholden/shared/ui";
-import type { Bastion } from "./BastionViewShared";
+import type { PlayerBastion as Bastion } from "@beholden/shared/api/bastions";
 import { useUiTranslation } from "@beholden/shared/i18n";
 
 export function BastionHeader({

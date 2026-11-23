@@ -3,7 +3,7 @@ import * as React from "react";
 import { conditionLabel } from "@beholden/shared/domain";
 
 import { theme } from "@/theme/theme";
-import { conditionIconByKey } from "@/icons/conditions";
+import { conditionIconByKey } from "@beholden/shared/icons";
 import type { ConditionInstance } from "@/domain/conditions";
 
 import "@/views/CombatView/combatView.css";

@@ -93,7 +93,7 @@ export default defineConfig(({ mode }) => {
         "/ws": {
           target: `http://localhost:${SERVER_PORT}`,
           ws: true,
-          changeOrigin: true,
+          // No changeOrigin: the server checks that Origin matches Host, so the original Host must reach it.
           configure: (proxy) => {
             proxy.on("error", () => {});
             proxy.on("proxyReqWs", (_proxyReq, _req, socket) => {

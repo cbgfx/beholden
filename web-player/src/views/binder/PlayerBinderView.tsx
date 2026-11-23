@@ -1,3 +1,6 @@
+import { BinderCompactCard } from "@beholden/shared/ui/BinderCompactCard";
+import { BinderLifeStatus } from "@beholden/shared/ui/BinderLifeStatus";
+import { BinderFilterChips } from "@beholden/shared/ui/BinderFilterChips";
 import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
 import { LocationMap } from "@beholden/shared/ui/LocationMap";
 import { PlayerBinderBacklinks } from "./PlayerBinderBacklinks";
@@ -55,10 +58,7 @@ function portraitSrc(mortal: Mortal) {
 
 function StatusPill({ status }: { status: string | null }) {
   const t = useUiTranslation("playerUi");
-  if (!status) return <span style={{ color: C.muted }}>{t("Not specified")}</span>;
-  const dead = status === "dead";
-  const color = dead ? "#ff5c65" : "#5bd36b";
-  return <span style={{ display: "inline-flex", padding: "2px 9px", borderRadius: 6, color: "#fff", background: color, fontSize: "var(--fs-small)", lineHeight: 1.35, fontWeight: 850 }}>{dead ? t("Dead") : t("Alive")}</span>;
+  return <BinderLifeStatus status={status} translate={t} theme={{ ...C, red: "#ff5c65", green: "#5bd36b" }} style={{ padding: "2px 9px", borderRadius: 6, fontWeight: 850 }} />;
 }
 
 function PublicPlaceIcon({ record, size = 22 }: { record: PublicRecord; size?: number }) {
@@ -759,35 +759,11 @@ export function PlayerBinderView() {
                   </button>
                 ) : null}
               </div>
-              {Object.entries(filters).some(([, values]) => values.length) ? (
-                <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
-                  {(Object.entries(filters) as Array<[keyof MortalFilters, string[]]>).flatMap(([key, values]) =>
-                    values.map((value) => (
-                      <button
-                        key={`${key}:${value}`}
-                        type="button"
-                        onClick={() => setFilters((current) => ({ ...current, [key]: current[key].filter((item) => item !== value) }))}
-                        style={{
-                          display: "inline-flex",
-                          gap: 5,
-                          padding: "2px 7px",
-                          border: `1px solid ${accent}7a`,
-                          borderRadius: 999,
-                          background: `${accent}1f`,
-                          color: C.text,
-                          cursor: "pointer",
-                          font: "inherit",
-                          fontSize: "var(--fs-tiny)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        <span style={{ color: accent }}>{fieldLabel(key)}</span>
-                        {value} <span style={{ color: "#ff5c65" }}>×</span>
-                      </button>
-                    )),
-                  )}
-                </div>
-              ) : null}
+              <BinderFilterChips filters={filters} accent={accent} theme={C}
+        label={(key) => fieldLabel(key)}
+        style={{ marginBottom: 14 }}
+        removeLabel={(label, value) => t("Remove {{value1}} {{value2}} filter", { value1: label, value2: value })}
+        onRemove={(key, value) => setFilters((current) => ({ ...current, [key]: current[key].filter((item) => item !== value) }))} />
               <div style={{ border: "1px solid rgba(255,255,255,.09)", borderRadius: 13, overflowX: "auto" }}>
                 <div style={{ minWidth: compact ? 0 : 1160 }}>
                   {!compact && <BinderDataTableHeader
@@ -814,11 +790,13 @@ export function PlayerBinderView() {
                     ]}
                   />}
                   {sorted.map((mortal) => {
-                    if (compact) return <button key={mortal.id} type="button" onClick={() => setSelectedId(mortal.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", alignItems: "center", gap: "6px 10px", width: "100%", minHeight: 44, padding: "10px 12px", border: 0, borderBottom: "1px solid rgba(255,255,255,.08)", color: C.text, background: "transparent", textAlign: "left", cursor: "pointer", font: "inherit" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}><BinderDataTableThumbnail imageUrl={mortal.imageUrl} resolveUrl={(url) => resolveAssetUrl(url) ?? url} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} /><strong style={{ minWidth: 0, overflowWrap: "anywhere" }}>{mortal.name}{mortal.id === data.linkedMortalId ? ` ${t("(You)")}` : ""}</strong></span>
-                      <StatusPill status={mortal.lifeStatus} />
-                      <span style={{ gridColumn: "1 / -1", color: C.muted, overflowWrap: "anywhere", fontSize: "var(--fs-small)" }}>{[mortal.position, mortal.organization, mortal.location, mortal.species].filter(Boolean).join(" · ")}</span>
-                    </button>;
+                    if (compact) return <BinderCompactCard key={mortal.id} theme={{ ...C, panelBorder: "rgba(255,255,255,.08)" }}
+                      title={mortal.name + (mortal.id === data.linkedMortalId ? ` ${t("(You)")}` : "")}
+                      onOpen={() => setSelectedId(mortal.id)}
+                      icon={<BinderDataTableThumbnail imageUrl={mortal.imageUrl} resolveUrl={(url) => resolveAssetUrl(url) ?? url} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />}
+                      badge={<StatusPill status={mortal.lifeStatus} />}>
+                      {[mortal.position, mortal.organization, mortal.location, mortal.species].filter(Boolean).join(" · ")}
+                    </BinderCompactCard>;
                     const genderColor = mortal.gender === "female" ? "#f9a8d4" : mortal.gender === "male" ? "#7dd3fc" : null;
                     const cell = { color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } as const;
                     return (

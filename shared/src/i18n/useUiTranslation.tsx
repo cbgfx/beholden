@@ -4,7 +4,7 @@ import { getI18n, I18nContext, useTranslation } from "react-i18next";
 export type UiTranslator = (source: string, values?: Record<string, unknown>) => string;
 
 /** react-i18next's useTranslation result wraps i18n anew on language changes. */
-export function useStableI18n() {
+function useStableI18n() {
   const instance = useContext(I18nContext)?.i18n ?? getI18n();
   if (!instance) throw new Error("Translation callbacks require an I18nextProvider");
   return instance;

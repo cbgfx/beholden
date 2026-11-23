@@ -7,7 +7,7 @@ import { createOperationQueue, getClientId, isOwnEcho } from "@beholden/shared/u
 import { useStore } from "@/store";
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
-import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionResponse, BastionsResponse, CompendiumFacility } from "@/tools/bastions/types";
+import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionResponse, BastionsResponse, CompendiumFacility } from "@beholden/shared/api/bastions";
 import { chipButtonStyle } from "@/tools/bastions/styles";
 import { BastionsSidebar } from "@/tools/bastions/BastionsSidebar";
 import { BastionOverviewPanel } from "@/tools/bastions/BastionOverviewPanel";

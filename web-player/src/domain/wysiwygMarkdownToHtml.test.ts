@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markdownToHtml } from "@beholden/shared/ui/markdownHtml";
+import { markdownToHtml, safeLinkHref } from "@beholden/shared/ui/markdownHtml";
 
 // markdownToHtml is pure string processing (no DOM APIs), unlike its counterpart htmlToMarkdown --
 // this is exactly the value the WysiwygNoteEditor split was meant to unlock: this direction is
@@ -51,6 +51,23 @@ describe("markdownToHtml", () => {
     // (as in this alert(1)) leaves one literal ")" behind after the label -- pre-existing behavior,
     // unrelated to this split, documented here rather than "fixed" as part of a pure extraction.
     expect(markdownToHtml("[click me](javascript:alert(1))")).toBe("<p>click me)</p>");
+  });
+
+  it("refuses script links disguised so a denylist would miss them", () => {
+    // Browsers drop leading control characters before reading the scheme, so this is javascript:.
+    expect(markdownToHtml("[x](\u0001javascript:alert`1`)")).toBe("<p>x</p>");
+    expect(markdownToHtml("[x](JaVaScRiPt:alert`1`)")).toBe("<p>x</p>");
+    expect(markdownToHtml("[x](data:text/html,hi)")).toBe("<p>x</p>");
+    expect(markdownToHtml("[x](vbscript:msgbox)")).toBe("<p>x</p>");
+  });
+
+  it("keeps only in-app paths, anchors, http(s) and mailto as links", () => {
+    expect(safeLinkHref("/binder/b1/mortals/m1")).toBe("/binder/b1/mortals/m1");
+    expect(safeLinkHref("#section")).toBe("#section");
+    expect(safeLinkHref("https://example.com")).toBe("https://example.com");
+    expect(safeLinkHref("mailto:dm@example.com")).toBe("mailto:dm@example.com");
+    expect(safeLinkHref("\u0001javascript:alert`1`")).toBeNull();
+    expect(safeLinkHref("//evil.example/path")).toBeNull();
   });
 
   it("renders a toggle block as a details/summary, recursing into its body", () => {

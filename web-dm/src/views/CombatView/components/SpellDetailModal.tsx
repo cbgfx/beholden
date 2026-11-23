@@ -3,7 +3,7 @@ import React from "react";
 import { theme } from "@/theme/theme";
 import { Modal } from "@/components/overlay/Modal";
 import { Button } from "@/ui/Button";
-import type { SpellDetail } from "@/views/CombatView/types";
+import type { SpellDetail } from "@/domain/types/compendium";
 
 export function SpellDetailModal(props: {
   isOpen: boolean;

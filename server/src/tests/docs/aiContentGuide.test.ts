@@ -24,8 +24,7 @@ import express from "express";
 import multer from "multer";
 import { CATEGORY_SCHEMAS, formatGrandCompendiumIssues } from "@beholden/shared/domain/compendium/grandCompendiumSchemas";
 import { openDb, type Db } from "../../lib/db.js";
-import { signToken } from "../../lib/jwtAuth.js";
-import { requireAuth } from "../../middleware/auth.js";
+import { signToken, testAuth } from "../../tests/helpers/testAuth.js";
 import { zodErrorMiddleware } from "../../lib/validate.js";
 import { registerAdventureRoutes } from "../../routes/adventures.js";
 import { registerCharacterRoutes } from "../../routes/characters/core.js";
@@ -219,7 +218,7 @@ describe("docs/guides/ai-content.md examples are accepted by the real importers"
     } as unknown as ServerContext;
     const app = express();
     app.use(express.json({ limit: "10mb" }));
-    app.use("/api", requireAuth);
+    app.use("/api", testAuth);
     registerAdventureRoutes(app, ctx);
     registerCharacterRoutes(app, ctx);
     app.use(zodErrorMiddleware);

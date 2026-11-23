@@ -1,4 +1,4 @@
-import { rollDiceExpr } from "@/lib/dice";
+import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { parseHpDelta, type HpDeltaKind, type ParsedHpDelta } from "@beholden/shared/domain";
 
 export type { HpDeltaKind, ParsedHpDelta };

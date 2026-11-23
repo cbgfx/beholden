@@ -1,4 +1,4 @@
-export type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
+type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type FeatPrerequisite = string | number | {
   level?: number;
   ability?: { any: AbilityKey[]; min?: number } | Array<{ any: AbilityKey[]; min?: number }>;

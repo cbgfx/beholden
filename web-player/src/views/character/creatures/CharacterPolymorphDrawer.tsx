@@ -1,7 +1,7 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
-import { formatCr } from "@/lib/monsterPicker/utils";
-import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
+import { formatCr } from "@beholden/shared/domain/monsters";
+import type { CompendiumMonsterRow } from "@beholden/shared/domain/compendium/monsterPicker";
 import { formatMonsterTypeLabel } from "@beholden/shared/domain";
 import { RightDrawer } from "@/ui/RightDrawer";
 

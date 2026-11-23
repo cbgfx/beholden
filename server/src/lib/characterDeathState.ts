@@ -1,7 +1,7 @@
 import type { Db } from "./db.js";
 
 // Apply to every SQL write path, including combat, rests, older clients and imports.
-export const CHARACTER_DEATH_TRIGGERS_SQL = ["players", "user_characters"].map((table) => `
+const CHARACTER_DEATH_TRIGGERS_SQL = ["players", "user_characters"].map((table) => `
 CREATE TRIGGER IF NOT EXISTS ${table}_normalize_life_update AFTER UPDATE OF hp_current,death_saves_success,death_saves_fail,is_dead ON ${table}
 WHEN (NEW.is_dead=1 AND NEW.hp_current<>0) OR (NEW.hp_current>0 AND (COALESCE(NEW.death_saves_success,0)<>0 OR COALESCE(NEW.death_saves_fail,0)<>0))
 BEGIN

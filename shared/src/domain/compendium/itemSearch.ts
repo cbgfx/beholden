@@ -29,33 +29,3 @@ export function buildItemTypeOptions(rows: ItemSearchRow[]): string[] {
   }
   return ["all", ...Array.from(values).sort()];
 }
-
-type ItemSearchFilters = {
-  q: string;
-  rarityFilter: string;
-  typeFilter: string;
-  filterAttunement: boolean;
-  filterMagic: boolean;
-  nameSearchValue?: (name: string) => string;
-};
-
-export function filterItemRows(rows: ItemSearchRow[], filters: ItemSearchFilters): ItemSearchRow[] {
-  const {
-    q,
-    rarityFilter,
-    typeFilter,
-    filterAttunement,
-    filterMagic,
-    nameSearchValue = (name) => name,
-  } = filters;
-  const qLow = q.toLowerCase().trim();
-  return rows.filter((row) => {
-    const searchName = nameSearchValue(row.name).toLowerCase();
-    if (qLow && !searchName.includes(qLow)) return false;
-    if (rarityFilter !== "all" && (row.rarity ?? "") !== rarityFilter) return false;
-    if (typeFilter !== "all" && row.type !== typeFilter) return false;
-    if (filterAttunement && !row.attunement) return false;
-    if (filterMagic && !row.magic) return false;
-    return true;
-  });
-}

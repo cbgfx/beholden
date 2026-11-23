@@ -67,7 +67,7 @@ function positiveIntOrNull(value: unknown): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-export async function buildCreatorSubmissionBody(args: {
+export type CreatorSubmissionArgs = {
   api: ApiFn;
   form: FormState;
   classDetail: ClassDetail | null;
@@ -110,7 +110,9 @@ export async function buildCreatorSubmissionBody(args: {
     choice: ParsedFeatChoice<string>,
     value: string,
   ) => "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | "maneuver" | null;
-}) {
+};
+
+export async function buildCreatorSubmissionBody(args: CreatorSubmissionArgs) {
   const {
     api,
     form,

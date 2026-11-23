@@ -12,8 +12,7 @@ import net from "node:net";
 import express from "express";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
-import { signToken } from "../../lib/jwtAuth.js";
-import { requireAuth } from "../../middleware/auth.js";
+import { signToken, testAuth } from "../../tests/helpers/testAuth.js";
 import { registerItemRoutes } from "./items.js";
 import type { ServerContext } from "../../server/context.js";
 
@@ -66,7 +65,7 @@ describe("GET /api/compendium/items magic filters", () => {
 
     const app = express();
     app.use(express.json());
-    app.use("/api", requireAuth);
+    app.use("/api", testAuth);
     registerItemRoutes(app, { db } as ServerContext, (_req, _res, next) => next());
 
     server = http.createServer(app);

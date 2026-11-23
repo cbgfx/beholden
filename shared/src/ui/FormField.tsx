@@ -18,22 +18,3 @@ export function FormField({
     </label>
   );
 }
-
-export function CheckRow({
-  label,
-  checked,
-  onChange,
-  style,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", ...style }}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
-    </label>
-  );
-}

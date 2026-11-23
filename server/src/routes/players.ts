@@ -214,7 +214,9 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   // MARK: - GET /api/campaigns/:campaignId/players
-  app.get("/api/campaigns/:campaignId/players", memberOrAdmin(db), (req, res) => {
+  // The DM's roster: raw hit points, temporary HP, death saves and each player's private notes with
+  // the DM. DM only - players see each other through /party, which shows health as a percentage.
+  app.get("/api/campaigns/:campaignId/players", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     if (!campaignId) return;
     const includeSharedNotes = queryFlag(req.query.includeSharedNotes) || String(req.query.includeSharedNotes ?? "").trim() === "";
@@ -250,7 +252,8 @@ export function registerPlayerRoutes(app: Express, ctx: ServerContext) {
   });
 
   // MARK: - GET /api/campaigns/:campaignId/players/:playerId
-  app.get("/api/campaigns/:campaignId/players/:playerId", memberOrAdmin(db), (req, res) => {
+  // One roster row, same contents and same rule as the list above: DM only.
+  app.get("/api/campaigns/:campaignId/players/:playerId", dmOrAdmin(db), (req, res) => {
     const campaignId = requireParam(req, res, "campaignId");
     const playerId = requireParam(req, res, "playerId");
     if (!campaignId || !playerId) return;

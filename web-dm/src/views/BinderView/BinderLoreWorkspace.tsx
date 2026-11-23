@@ -17,7 +17,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { BacklinksPanel } from "./BacklinksPanel";
 import { useValidMentionIds } from "./useValidMentionIds";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
-import { BinderCompactCard } from "./BinderCompactCard";
+import { BinderCompactCard } from "@beholden/shared/ui/BinderCompactCard";
 
 type CampaignOption = { id: string; name: string };
 type CompendiumOption = { id: string; itemId: string; ruleset: "5e" | "5.5e"; name: string };
@@ -344,7 +344,7 @@ export function BinderLoreWorkspace(props: {
                     event.records.map((entry) => entry.name).join(", ") || "None",
                     event.campaigns.map((entry) => entry.name).join(", ") || "None",
                   ];
-            if (compact) return <BinderCompactCard key={row.id} title={cells[0]} onOpen={() => navigate(`/binder/${props.binderId}/${props.type}/${row.id}`)}>
+            if (compact) return <BinderCompactCard theme={theme.colors} key={row.id} title={cells[0]} onOpen={() => navigate(`/binder/${props.binderId}/${props.type}/${row.id}`)}>
               {cells.slice(1).map((cell, index) => <span key={index} style={{ display: "block" }}>{translateUi(headers[index + 1]!)}: {cell}</span>)}
             </BinderCompactCard>;
             return (

@@ -1,5 +1,14 @@
 import React from "react";
 
+export type IconButtonTheme = {
+  borderColor: string;
+  accentColor: string;
+  textColor: string;
+  textDarkColor: string;
+  hoverBackground?: string;
+  ghostBackground?: string;
+};
+
 export function IconButton(props: {
   children: React.ReactNode;
   title?: string;
@@ -8,15 +17,9 @@ export function IconButton(props: {
   disabled?: boolean;
   variant?: "ghost" | "solid" | "accent";
   size?: "sm" | "md";
-  borderColor: string;
-  accentColor: string;
-  textColor: string;
-  textDarkColor: string;
-  hoverBackground?: string;
-  ghostBackground?: string;
   style?: React.CSSProperties;
   className?: string;
-}) {
+} & IconButtonTheme) {
   const [hovered, setHovered] = React.useState(false);
   const size = props.size ?? "md";
   const variant = props.variant ?? "ghost";

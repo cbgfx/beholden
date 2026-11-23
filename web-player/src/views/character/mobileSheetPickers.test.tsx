@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({ api: vi.fn(), refresh: vi.fn(), translate: (so
 vi.mock("@/services/api", () => ({ api: mocks.api }));
 vi.mock("@beholden/shared/i18n/useUiTranslation", () => ({ useUiTranslation: () => mocks.translate, useUiMessages: () => mocks.translate }));
 vi.mock("@/views/CompendiumView/hooks/useItemSearch", () => ({ useItemSearch: useSearchStub }));
-vi.mock("@/lib/monsterPicker/useVirtualList", () => ({ useVirtualList: () => ({ scrollRef: useRef(null), onScroll: () => {}, getRange: (length: number) => ({ start: 0, end: length, padTop: 0, padBottom: 0 }) }) }));
+vi.mock("@beholden/shared/domain/compendium/monsterPicker", () => ({ useVirtualList: () => ({ scrollRef: useRef(null), onScroll: () => {}, getRange: (length: number) => ({ start: 0, end: length, padTop: 0, padBottom: 0 }) }) }));
 function useSearchStub() {
   const [q, setQ] = useState("");
   return { q, setQ, rarityFilter: "all", setRarityFilter: () => {}, rarityOptions: ["all"], typeFilter: "all", setTypeFilter: () => {}, typeOptions: ["all"], filterAttunement: false, setFilterAttunement: () => {}, filterMagic: false, setFilterMagic: () => {}, hasActiveFilters: false, clearFilters: () => {}, rows: [{ id: "relic", name: "Relic", rarity: "common", type: "Gear" }], busy: false, error: null, totalCount: 1, loadingMore: false, hasMore: false, loadMore: () => {}, refresh: mocks.refresh };

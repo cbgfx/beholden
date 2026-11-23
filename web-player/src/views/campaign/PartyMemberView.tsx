@@ -16,7 +16,7 @@ import { PartyMemberProficienciesColumn } from "./PartyMemberProficienciesColumn
 import { useUiTranslation } from "@beholden/shared/i18n";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
 
-export interface NamedEntry {
+interface NamedEntry {
   name: string;
   id?: string;
   level?: number | null;

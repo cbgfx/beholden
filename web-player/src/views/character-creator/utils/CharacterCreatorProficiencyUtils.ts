@@ -178,6 +178,17 @@ export function buildProficiencyMap(args: {
     if (!formatted || isProficiencyNoiseToken(formatted)) return;
     expertise.push({ name: formatted, source });
   };
+  const applyFeatGrants = (grants: ReturnType<typeof collectFeatTaggedEntries>) => {
+    grants.skills.forEach((entry) => skills.push(entry));
+    grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
+    grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
+    grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
+    grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
+    grants.saves.forEach((entry) => saves.push(entry));
+    grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
+    grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+  };
+
   const cantripById = Object.fromEntries(classCantrips.map((spell) => [spell.id, spell]));
   const spellById = Object.fromEntries(classSpells.map((spell) => [spell.id, spell]));
   const invocationById = Object.fromEntries(classInvocations.map((spell) => [spell.id, spell]));
@@ -254,14 +265,7 @@ export function buildProficiencyMap(args: {
           ? resolveSelectedSpellOptionEntries([value], spellChoiceOptionsByKey[key] ?? [])[0]?.name ?? value
           : value,
       });
-      grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
-      grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
-      grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-      grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-      grants.saves.forEach((entry) => saves.push(entry));
-      grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
-      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+      applyFeatGrants(grants);
       resolveFeatSpellEntries({
         feat,
         sourceLabel: feat.name,
@@ -307,14 +311,7 @@ export function buildProficiencyMap(args: {
           ? resolveSelectedSpellOptionEntries([value], spellChoiceOptionsByKey[key] ?? [])[0]?.name ?? value
           : value,
       });
-      grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
-      grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
-      grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-      grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-      grants.saves.forEach((entry) => saves.push(entry));
-      grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
-      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+      applyFeatGrants(grants);
       resolveFeatSpellEntries({
         feat,
         sourceLabel: feat.name,
@@ -333,14 +330,7 @@ export function buildProficiencyMap(args: {
           ? resolveSelectedSpellOptionEntries([value], spellChoiceOptionsByKey[key] ?? [])[0]?.name ?? value
           : value,
       });
-      grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
-      grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
-      grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-      grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-      grants.saves.forEach((entry) => saves.push(entry));
-      grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
-      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+      applyFeatGrants(grants);
       resolveFeatSpellEntries({
         feat: bgOriginFeatDetail,
         sourceLabel: bgOriginFeatDetail.name,
@@ -383,14 +373,7 @@ export function buildProficiencyMap(args: {
           ? resolveSelectedSpellOptionEntries([value], spellChoiceOptionsByKey[key] ?? [])[0]?.name ?? value
           : value,
       });
-      grants.skills.forEach((entry) => skills.push(entry));
-      grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
-      grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
-      grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-      grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-      grants.saves.forEach((entry) => saves.push(entry));
-      grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
-      grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+      applyFeatGrants(grants);
       resolveFeatSpellEntries({
         feat: raceFeatDetail,
         sourceLabel: raceFeatDetail.name,
@@ -416,14 +399,7 @@ export function buildProficiencyMap(args: {
         ? resolveSelectedSpellOptionEntries([value], spellChoiceOptionsByKey[key] ?? [])[0]?.name ?? value
         : value,
     });
-    grants.skills.forEach((entry) => skills.push(entry));
-    grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
-    grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
-    grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-    grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-    grants.saves.forEach((entry) => saves.push(entry));
-    grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
-    grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+    applyFeatGrants(grants);
     resolveFeatSpellEntries({
       feat,
       sourceLabel: feat.name,
@@ -439,14 +415,7 @@ export function buildProficiencyMap(args: {
       selectedChoices: form.chosenFeatOptions,
       getChoiceKey: (choice) => `extra:${feat.id}:${choice.id}`,
     });
-    grants.skills.forEach((entry) => skills.push(entry));
-    grants.tools.forEach((entry) => pushTool(entry.name, entry.source));
-    grants.languages.forEach((entry) => pushLanguage(entry.name, entry.source));
-    grants.armor.forEach((entry) => pushArmor(entry.name, entry.source));
-    grants.weapons.forEach((entry) => pushWeapon(entry.name, entry.source));
-    grants.saves.forEach((entry) => saves.push(entry));
-    grants.expertise.forEach((entry) => pushExpertise(entry.name, entry.source));
-    grants.maneuvers.forEach((entry) => maneuvers.push(entry));
+    applyFeatGrants(grants);
     resolveFeatSpellEntries({
       feat,
       sourceLabel: feat.name,

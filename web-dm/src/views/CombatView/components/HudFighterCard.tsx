@@ -4,7 +4,7 @@ import * as React from "react";
 import { theme, withAlpha } from "@/theme/theme";
 import { HudConditionsStrip } from "@/views/CombatView/components/HudConditionsStrip";
 import { clamp01, getHudHp, getHudHpFill, getHudNames } from "@/views/CombatView/utils/hud";
-import { conditionIconByKey } from "@/icons/conditions";
+import { conditionIconByKey } from "@beholden/shared/icons";
 import type { EncounterActor, CampaignCharacter } from "@/domain/types/domain";
 
 import "@/views/CombatView/combatView.css";

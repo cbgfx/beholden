@@ -1,4 +1,4 @@
-import type { MonsterDetail } from "@/views/CombatView/types";
+import type { MonsterDetail } from "@/domain/types/compendium";
 
 export function dexModFromMonster(d: MonsterDetail | null): number {
   const raw = d?.raw_json as Record<string, unknown> | undefined;

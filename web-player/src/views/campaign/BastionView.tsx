@@ -6,7 +6,7 @@ import { api, jsonInit } from "@/services/api";
 import { useWs } from "@/services/ws";
 import { createOperationQueue, getClientId, isOwnEcho } from "@beholden/shared/ui";
 import { Panel, SubsectionLabel } from "@beholden/shared/ui";
-import type { Bastion, BastionCompendiumResponse, BastionFacility, BastionResponse, CompendiumFacility } from "./BastionViewShared";
+import type { PlayerBastion as Bastion, PlayerBastionCompendiumResponse as BastionCompendiumResponse, BastionFacility, PlayerBastionResponse as BastionResponse, CompendiumFacility } from "@beholden/shared/api/bastions";
 import { sortFacilitiesByLevelThenName } from "./BastionViewShared";
 import { FALLBACK_SPECIAL_FACILITY_SLOTS, specialFacilitySlotsForLevel } from "@beholden/shared/domain/bastionFacilities";
 import { FacilityRows } from "./BastionFacilityRows";

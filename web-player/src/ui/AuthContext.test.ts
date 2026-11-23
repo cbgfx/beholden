@@ -43,12 +43,18 @@ it("a stale authorization error cannot discard a newer profile/token", async () 
   await act(async () => { request.reject({ status: 401 }); });
   expect(auth.result.user).toEqual(user); expect(localStorage.getItem("beholden_csrf")).toBe("new");
 });
-it("keeps a migration token on network failure and clears credentials on authorization rejection", async () => {
+it("discards a leftover bearer token without sending it, and clears credentials on authorization rejection", async () => {
+  // The server no longer accepts bearer tokens, so one left by an old build is dropped, never migrated.
+  localStorage.setItem("beholden_csrf", "proof");
   harness.raw.mockRejectedValueOnce(new Error("offline"));
   const auth = await renderAuth();
-  expect(localStorage.getItem("beholden_token")).toBe("old");
+  expect(localStorage.getItem("beholden_token")).toBeNull();
+  expect(harness.raw).toHaveBeenCalledTimes(1);
+  expect(harness.raw).toHaveBeenCalledWith("/api/auth/me");
+  // A network failure is not a rejection: the session proof survives it.
+  expect(localStorage.getItem("beholden_csrf")).toBe("proof");
   act(() => window.dispatchEvent(new Event("beholden:auth-invalid")));
-  expect(localStorage.getItem("beholden_token")).toBeNull(); expect(localStorage.getItem("beholden_csrf")).toBeNull();
+  expect(localStorage.getItem("beholden_csrf")).toBeNull();
   expect(auth.result.isLoading).toBe(false);
 });
 it("a pending login cannot undo logout", async () => {

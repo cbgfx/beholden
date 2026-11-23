@@ -10,8 +10,8 @@ import {
 import { theme } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import { Select } from "@/ui/Select";
-import type { BastionFacility, CompendiumFacility } from "@/tools/bastions/types";
-import { normalizeOrder, orderListWithMaintain } from "@/tools/bastions/utils";
+import type { BastionFacility, CompendiumFacility } from "@beholden/shared/api/bastions";
+import { normalizeOrder, orderListWithMaintain } from "@beholden/shared/domain/bastionFacilities";
 import { CommittedInput } from "@/tools/bastions/CommittedFields";
 import { chipButtonStyle } from "@/tools/bastions/styles";
 

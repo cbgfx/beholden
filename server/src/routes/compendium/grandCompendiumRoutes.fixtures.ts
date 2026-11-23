@@ -9,8 +9,7 @@ import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
-import { signToken } from "../../lib/jwtAuth.js";
-import { requireAuth } from "../../middleware/auth.js";
+import { signToken, testAuth } from "../../tests/helpers/testAuth.js";
 import { registerCompendiumRoutes } from "../compendium.js";
 import { importNativeCompendiumBatch } from "../../services/compendium/nativeCompendium.js";
 import type { ServerContext } from "../../server/context.js";
@@ -328,17 +327,17 @@ export function makeTestBatch(
   };
 }
 
-export let server: http.Server;
+let server: http.Server;
 
-export let port: number;
+let port: number;
 
 export let db: Database.Database;
 
 export let compendiumUploadDir: string;
 
-export let testDataDir: string;
+let testDataDir: string;
 
-export const adminToken = signToken({
+const adminToken = signToken({
     userId: "test-admin",
     username: "admin",
     isAdmin: true,
@@ -494,7 +493,7 @@ before(async () => {
     const app = express();
     app.use(express.json());
     // Apply auth to all /api routes (mirrors createServer.ts without health/login exemptions)
-    app.use("/api", requireAuth);
+    app.use("/api", testAuth);
     registerCompendiumRoutes(app, ctx);
 
     server = http.createServer(app);

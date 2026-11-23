@@ -1,6 +1,6 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
-import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
+import { formatCr } from "@beholden/shared/domain/monsters";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";

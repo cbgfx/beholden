@@ -57,3 +57,19 @@ it.each([["Deities", "Wisdom", "deity"], ["Places", "Kingdom", "place"], ["Campa
   await act(async () => router.navigate(-1));
   expect(button(name)).toBeTruthy();
 });
+
+it("removes one saved filter without clearing the others, including after navigation", async () => {
+  localStorage.setItem("player-binder:character:mortal-filters", JSON.stringify({
+    filters: { position: ["Missing"], organization: [], location: [], species: ["Human"], gender: [], status: [] },
+  }));
+  const router = await setup();
+  expect([...host.querySelectorAll("button")].some((b) => b.textContent!.includes("Hero"))).toBe(false);
+  await click("Missing");
+  expect(button("Hero").textContent).toContain("Alive");
+  const saved = JSON.parse(localStorage.getItem("player-binder:character:mortal-filters")!);
+  expect(saved.filters.position).toEqual([]);
+  expect(saved.filters.species).toEqual(["Human"]);
+  await click("Hero");
+  await act(async () => router.navigate(-1));
+  expect(button("Species").textContent).toContain("Human");
+});

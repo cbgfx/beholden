@@ -65,10 +65,6 @@ export function reconcileProgressionOccurrences(args: {
   return [...untouched, ...next];
 }
 
-export function valuesFromProgressionOccurrences(entries: ProgressionSelectionOccurrence[], kind: ProgressionSelectionKind, classEntryId?: string): string[] {
-  return entries.filter((entry) => entry.kind === kind && (!classEntryId || entry.classEntryId === classEntryId)).map((entry) => entry.valueId);
-}
-
 export function removeClassProgressionOccurrences(entries: ProgressionSelectionOccurrence[], classEntryId: string, targetClassLevel: number): ProgressionSelectionOccurrence[] {
   return entries.filter((entry) => entry.classEntryId !== classEntryId || entry.classLevel == null || entry.classLevel <= targetClassLevel);
 }

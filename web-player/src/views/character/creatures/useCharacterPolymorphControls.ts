@@ -1,6 +1,6 @@
 import React from "react";
 import { api } from "@/services/api";
-import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
+import type { CompendiumMonsterRow } from "@beholden/shared/domain/compendium/monsterPicker";
 
 export function useCharacterPolymorphControls(open: boolean) {
   const [polymorphQuery, setPolymorphQuery] = React.useState("");

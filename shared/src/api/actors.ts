@@ -1,4 +1,4 @@
-export type ActorId = string;
+type ActorId = string;
 
 export interface ActorConditionInstanceDto {
   key: string;
@@ -35,7 +35,7 @@ export interface CharacterCampaignAssignmentDto {
   playerId: string | null;
 }
 
-export interface CharacterSheetSnapshotDto {
+interface CharacterSheetSnapshotDto {
   name: string;
   playerName: string;
   ruleset: "5e" | "5.5e";
@@ -57,7 +57,7 @@ export interface CharacterSheetSnapshotDto {
   derivedSpeed?: number | null;
 }
 
-export interface CharacterSheetLiveDto {
+interface CharacterSheetLiveDto {
   hpCurrent: number;
   conditions: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
@@ -90,7 +90,7 @@ export interface CharacterSheetDto {
   updatedAt?: number;
 }
 
-export interface CampaignCharacterSheetDto {
+interface CampaignCharacterSheetDto {
   playerName: string;
   characterName: string;
   class: string;
@@ -112,7 +112,7 @@ export interface CampaignCharacterSheetDto {
   color?: string | null;
 }
 
-export interface CampaignCharacterLiveDto {
+interface CampaignCharacterLiveDto {
   hpCurrent: number;
   conditions: ActorConditionInstanceDto[];
   overrides?: ActorOverridesDto;
@@ -134,9 +134,9 @@ export interface CampaignCharacterDto {
   updatedAt?: number;
 }
 
-export type EncounterActorBaseTypeDto = "player" | "monster" | "inpc" | "world";
+type EncounterActorBaseTypeDto = "player" | "monster" | "inpc" | "world";
 
-export interface EncounterActorSnapshotDto {
+interface EncounterActorSnapshotDto {
   name: string;
   label: string;
   playerName?: string;
@@ -150,7 +150,7 @@ export interface EncounterActorSnapshotDto {
   description?: string;
 }
 
-export interface EncounterActorLiveDto {
+interface EncounterActorLiveDto {
   initiative: number | null;
   hpCurrent: number | null;
   conditions: ActorConditionInstanceDto[];

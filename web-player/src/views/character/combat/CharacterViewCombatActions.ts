@@ -14,7 +14,7 @@ import {
 } from "@/views/character/CharacterViewHelpers";
 import type { CharacterData, ConditionInstance, ResourceCounter, TaggedItem } from "@/views/character/CharacterSheetTypes";
 import { toggleConditionInstance } from "@/views/character/combat/CharacterConditions";
-import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
+import type { CompendiumMonsterRow } from "@beholden/shared/domain/compendium/monsterPicker";
 import { getLongRestOverrides, getLongRestRecovery } from "@/views/character/combat/CharacterRestRecovery";
 import { resolvePolymorphRevert } from "@beholden/shared/domain/actors";
 import { recoverItemCharges } from "@/views/character/inventory/CharacterInventory";

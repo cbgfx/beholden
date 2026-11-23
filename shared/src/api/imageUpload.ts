@@ -19,7 +19,7 @@ const UPLOAD_MAX_EDGE_PX = 1024;
  * failed encode), the original file is returned untouched and the server does the work instead. The
  * original is also kept if re-encoding didn't actually make it smaller.
  */
-export async function shrinkImageForUpload(file: File): Promise<File> {
+async function shrinkImageForUpload(file: File): Promise<File> {
   if (typeof createImageBitmap !== "function" || typeof document === "undefined") return file;
 
   let bitmap: ImageBitmap;

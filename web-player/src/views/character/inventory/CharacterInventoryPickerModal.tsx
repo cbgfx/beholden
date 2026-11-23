@@ -7,7 +7,7 @@ import { api } from "@/services/api";
 import { Select } from "@/ui/Select";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
-import { useVirtualList } from "@/lib/monsterPicker/useVirtualList";
+import { useVirtualList } from "@beholden/shared/domain/compendium/monsterPicker";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import type { CompendiumItemDetail, InventoryPickerPayload } from "@/views/character/inventory/CharacterInventory";
 import { formatItemDamageType, formatItemProperties, hasStealthDisadvantage } from "@/views/character/inventory/CharacterInventory";

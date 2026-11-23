@@ -17,7 +17,7 @@ export function toFinite(n: unknown, fallback: number): number {
   return Number.isFinite(x) ? x : fallback;
 }
 
-export function listToString(v: unknown): string {
+function listToString(v: unknown): string {
   if (!v) return "";
   if (typeof v === "string") return v;
   if (Array.isArray(v)) {
@@ -238,15 +238,6 @@ export function buildMonsterInfoLines(
     ...(dmgImm ? [{ label: "Damage Immunities", value: dmgImm }] : []),
     ...(condImm ? [{ label: "Condition Immunities", value: condImm }] : []),
   ];
-}
-
-export function normalizeSpellName(name: string): string {
-  return name
-    .replace(/\([^)]+\)\s*$/g, "")
-    .replace(/\s*\[[^\]]+\]\s*$/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
 }
 
 function parseCrNumber(value: unknown): number {

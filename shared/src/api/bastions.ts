@@ -2,7 +2,7 @@ import type {
   BastionFacilityUpgrade,
   BastionSpaceDefinition,
   SpecialFacilitySlotStep,
-} from "@beholden/shared/domain/bastionFacilities";
+} from "../domain/bastionFacilities";
 
 export type CompendiumFacility = {
   id: string;
@@ -81,3 +81,9 @@ export type BastionCompendiumResponse = {
   /** Special facility slots by level, from the compendium's rules entry. */
   specialFacilitySlots: SpecialFacilitySlotStep[];
 };
+
+/** Player responses omit the DM-only wall/assignment fields. */
+export type PlayerBastion = Omit<Bastion, "walled" | "assignedCharacterIds">;
+export type PlayerBastionResponse = Omit<BastionResponse, "bastion"> & { bastion: PlayerBastion };
+export type PlayerBastionCompendiumResponse = Pick<BastionCompendiumResponse, "ok" | "facilities">
+  & Partial<Pick<BastionCompendiumResponse, "spaces" | "specialFacilitySlots">>;

@@ -1,5 +1,5 @@
 import type { EncounterActor } from "@/domain/types/domain";
-import { rollDiceExpr } from "@/views/CombatView/utils/dice";
+import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { parseHpDelta, resolveActorHealing } from "@beholden/shared/domain";
 
 export type HpDelta = { kind: "damage" | "heal"; amount: number };

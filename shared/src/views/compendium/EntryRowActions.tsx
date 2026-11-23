@@ -89,7 +89,7 @@ export function EntryRowActions(props: {
 }
 
 /** The + button in a browser's header that opens the create form. */
-export function BrowserAddButton(props: { title: string; onClick: () => void }) {
+function BrowserAddButton(props: { title: string; onClick: () => void }) {
   return (
     <button
       type="button"

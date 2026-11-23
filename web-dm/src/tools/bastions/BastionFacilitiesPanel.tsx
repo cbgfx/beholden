@@ -11,7 +11,7 @@ import {
   selectedSpecialSlotsForPlayer,
   selectedSpecialUsageForPlayer,
 } from "@/tools/bastions/metrics";
-import type { Bastion, CompendiumFacility } from "@/tools/bastions/types";
+import type { Bastion, CompendiumFacility } from "@beholden/shared/api/bastions";
 
 export function BastionFacilitiesPanel(props: {
   selectedBastion: Bastion;

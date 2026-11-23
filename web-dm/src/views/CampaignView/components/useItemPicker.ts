@@ -1,6 +1,6 @@
 import React from "react";
 import type { CompendiumItemDetail, CompendiumItemRow } from "@/domain/types/compendium";
-import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
+import { useVirtualList } from "@beholden/shared/domain/compendium/monsterPicker";
 import { api } from "@/services/api";
 import { useItemSearch } from "@/views/CompendiumView/hooks/useItemSearch";
 import { useInfiniteScroll } from "@beholden/shared/ui";

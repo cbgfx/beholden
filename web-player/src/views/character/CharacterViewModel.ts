@@ -1,5 +1,5 @@
 import type React from "react";
-import type { CompendiumMonsterRow } from "@/lib/monsterPicker/types";
+import type { CompendiumMonsterRow } from "@beholden/shared/domain/compendium/monsterPicker";
 import type { CharacterCombatPanelsProps } from "@/views/character/combat/CharacterCombatPanels";
 import type { useCompendiumMonster } from "@/views/character/creatures/CharacterCompendiumMonsterHooks";
 import type { buildCharacterHpActions } from "@/views/character/combat/CharacterViewHpActions";

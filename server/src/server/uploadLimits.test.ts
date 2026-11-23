@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import sharp from "sharp";
 import type express from "express";
-import { corsMiddleware, createInMemoryRateLimiter, isImageUploadRequest, securityHeadersMiddleware } from "./security.js";
+import Database from "better-sqlite3";
+import { corsMiddleware, createDurableLoginRateLimiter, createInMemoryRateLimiter, getClientIp, isImageUploadRequest, isOriginAllowed, securityHeadersMiddleware } from "./security.js";
+import type { Db } from "../lib/db.js";
 import { prepareUploadedImage } from "../lib/imageHelpers.js";
 
 type FakeResponse = express.Response & { statusCode: number; body: unknown; headers: Record<string, string> };
@@ -102,6 +104,57 @@ test("forwarded client addresses are ignored unless proxy trust is explicitly en
   }
 });
 
+test("behind a trusted proxy the client address is counted from the right, so a forged prefix is ignored", () => {
+  const previous = process.env.BEHOLDEN_TRUST_PROXY;
+  const withForwarded = (forwarded: string, extra: Record<string, string> = {}) => {
+    const req = fakeRequest("POST", "/api/auth/login");
+    req.headers["x-forwarded-for"] = forwarded;
+    Object.assign(req.headers, extra);
+    return req;
+  };
+  try {
+    // One proxy appended the real client (203.0.113.9) after whatever the client sent.
+    process.env.BEHOLDEN_TRUST_PROXY = "true";
+    assert.equal(getClientIp(withForwarded("198.51.100.1, 203.0.113.9")), "203.0.113.9");
+    assert.equal(getClientIp(withForwarded("198.51.100.2, 203.0.113.9")), "203.0.113.9");
+    // CF-Connecting-IP and X-Real-IP mean nothing unless Cloudflare is what was configured.
+    assert.equal(getClientIp(withForwarded("203.0.113.9", { "cf-connecting-ip": "1.2.3.4", "x-real-ip": "5.6.7.8" })), "203.0.113.9");
+
+    // Two proxies: step back two entries.
+    process.env.BEHOLDEN_TRUST_PROXY = "2";
+    assert.equal(getClientIp(withForwarded("198.51.100.1, 203.0.113.9, 10.0.0.2")), "203.0.113.9");
+
+    process.env.BEHOLDEN_TRUST_PROXY = "cloudflare";
+    assert.equal(getClientIp(withForwarded("198.51.100.1", { "cf-connecting-ip": "203.0.113.9" })), "203.0.113.9");
+  } finally {
+    if (previous === undefined) delete process.env.BEHOLDEN_TRUST_PROXY;
+    else process.env.BEHOLDEN_TRUST_PROXY = previous;
+  }
+});
+
+test("the login limiter caps guesses at one account even when they come from many addresses", () => {
+  const db = new Database(":memory:");
+  db.exec("CREATE TABLE auth_login_limits (bucket_key TEXT PRIMARY KEY, attempt_count INTEGER NOT NULL, reset_at INTEGER NOT NULL)");
+  const limiter = createDurableLoginRateLimiter(db as unknown as Db, { windowMs: 60_000, max: 10, accountMax: 3 });
+  const attempt = (address: string) => {
+    const req = fakeRequest("POST", "/api/auth/login");
+    (req.socket as { remoteAddress: string }).remoteAddress = address;
+    req.body = { username: "Admin" };
+    const res = fakeResponse();
+    let passed = false;
+    limiter(req, res, () => { passed = true; });
+    return { passed, res };
+  };
+  // Every attempt from a fresh address, so the per-address bucket never fills.
+  assert.equal(attempt("198.51.100.1").passed, true);
+  assert.equal(attempt("198.51.100.2").passed, true);
+  assert.equal(attempt("198.51.100.3").passed, true);
+  const blocked = attempt("198.51.100.4");
+  assert.equal(blocked.passed, false);
+  assert.equal(blocked.res.statusCode, 429);
+  db.close();
+});
+
 test("disallowed origins are rejected and security headers are applied", () => {
   const denied = fakeRequest("POST", "/api/me/profile");
   denied.headers.origin = "https://evil.example";
@@ -110,6 +163,14 @@ test("disallowed origins are rejected and security headers are applied", () => {
   corsMiddleware(new Set(["beholden.example"]))(denied, deniedResponse, () => { deniedPassed = true; });
   assert.equal(deniedPassed, false);
   assert.equal(deniedResponse.statusCode, 403);
+
+  // With no allowlist configured, only the page's own origin (Origin host == Host header) gets in.
+  // Another port on the same machine is same-site for cookies, so it must not be let through.
+  assert.equal(isOriginAllowed("http://192.168.1.10:5174", "192.168.1.10:5174", null), true);
+  assert.equal(isOriginAllowed("http://192.168.1.10:8080", "192.168.1.10:5174", null), false);
+  assert.equal(isOriginAllowed("https://app.sibling.example", "beholden.example", null), false);
+  assert.equal(isOriginAllowed("https://beholden.example", "api.example", new Set(["beholden.example"])), true);
+  assert.equal(isOriginAllowed(undefined, "beholden.example", null), true);
 
   const headersResponse = fakeResponse();
   securityHeadersMiddleware()(fakeRequest("GET", "/api/auth/me"), headersResponse, () => {});

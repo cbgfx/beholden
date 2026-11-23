@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { evaluateDiceExpr } from "@beholden/shared/domain/dice";
-import { sanitizeDiceInput } from "@/lib/dice";
+import { sanitizeDiceInput } from "@beholden/shared/domain/dice";
 import { parseCharacterHpDelta } from "@/views/character/combat/CharacterHpDelta";
 
 // Every operator, through the same path each field takes: what survives typing (sanitizeDiceInput,

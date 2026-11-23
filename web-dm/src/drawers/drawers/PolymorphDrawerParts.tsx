@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/ui/Button";
 import { theme } from "@/theme/theme";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
-import { formatCr } from "@/views/CampaignView/monsterPicker/utils";
+import { formatCr } from "@beholden/shared/domain/monsters";
 import { titleCase } from "@beholden/shared/domain/text/titleCase";
 
 const selectStyle: React.CSSProperties = {

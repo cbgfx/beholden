@@ -1,4 +1,4 @@
-export type RequirementState = "loading" | "failed" | "incomplete" | "complete" | "not_applicable";
+type RequirementState = "loading" | "failed" | "incomplete" | "complete" | "not_applicable";
 
 export type ProgressionRequirement = {
   id: string;

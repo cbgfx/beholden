@@ -7,7 +7,7 @@ import { ZipArchive } from "archiver";
 import { extractDatabaseArchive } from "../services/databaseArchive.js";
 import type { ServerContext } from "../server/context.js";
 import { parseBody } from "../lib/validate.js";
-import { hashPasswordAsync } from "../lib/jwtAuth.js";
+import { hashPasswordAsync } from "../lib/passwords.js";
 import { syncOwnedPlayerName } from "../services/characters.js";
 import { deleteCharacterWithPlayers, removeUserPlayersFromCampaign } from "../services/characterDeletion.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";

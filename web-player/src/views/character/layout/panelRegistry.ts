@@ -32,10 +32,7 @@ export interface PanelColorSettings {
 export const MOVABLE_PANEL_IDS = Object.values(PANEL_IDS).filter(
   (id) => id !== PANEL_IDS.combatStats,
 ) as PanelId[];
-export type {
-  ColumnIconId as SheetColumnIcon,
-  ColumnHeader as SheetColumnHeader,
-} from "@beholden/shared/domain/layoutColumns";
+export type { ColumnIconId as SheetColumnIcon } from "@beholden/shared/domain/layoutColumns";
 
 export const PANEL_TITLES: Record<PanelId, string> = {
   [PANEL_IDS.abilitiesSaves]: "Abilities & Saves",

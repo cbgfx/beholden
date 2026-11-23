@@ -25,7 +25,7 @@ export interface SharedDeathSaves {
   fail: number;
 }
 
-export interface SharedAbilityScoreOverrides {
+interface SharedAbilityScoreOverrides {
   str?: number | undefined;
   dex?: number | undefined;
   con?: number | undefined;
@@ -48,7 +48,7 @@ export interface SharedCombatOverrides {
   } | undefined;
 }
 
-export function isPolymorphCondition(condition: SharedConditionInstance | null | undefined): condition is SharedPolymorphCondition {
+function isPolymorphCondition(condition: SharedConditionInstance | null | undefined): condition is SharedPolymorphCondition {
   return condition?.key === "polymorphed";
 }
 

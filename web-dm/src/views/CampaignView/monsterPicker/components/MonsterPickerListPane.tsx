@@ -9,7 +9,7 @@ import { MonsterFilters } from "@beholden/shared/views/compendium/MonsterFilters
 import { LettersBar } from "@/views/CampaignView/monsterPicker/components/LettersBar";
 import { MonsterRow } from "@/views/CampaignView/monsterPicker/components/MonsterRow";
 import type { SortMode } from "@/views/CampaignView/monsterPicker/types";
-import { useVirtualList } from "@/views/CampaignView/monsterPicker/hooks/useVirtualList";
+import { useVirtualList } from "@beholden/shared/domain/compendium/monsterPicker";
 
 /** A row whose window is still in flight: keeps the list the right height while it arrives. */
 function MonsterRowPlaceholder({ compact }: { compact?: boolean }) {

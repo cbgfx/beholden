@@ -15,7 +15,7 @@ import test from "node:test";
 import Database from "better-sqlite3";
 import express from "express";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
-import { signToken } from "../../lib/jwtAuth.js";
+import { signToken } from "../../tests/helpers/testAuth.js";
 import { zodErrorMiddleware } from "../../lib/validate.js";
 import type { ServerContext } from "../../server/context.js";
 import { registerCombatRoutes } from "./core.js";

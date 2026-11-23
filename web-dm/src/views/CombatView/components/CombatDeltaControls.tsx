@@ -7,7 +7,7 @@ import {
   rollDiceExpr,
   hasDiceTerm,
   sanitizeDiceInput,
-} from "@/views/CombatView/utils/dice";
+} from "@beholden/shared/domain/dice";
 
 type Props = {
   value: string;

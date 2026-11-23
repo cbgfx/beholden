@@ -1,5 +1,5 @@
 import React from "react";
-import { rollDiceExpr } from "@/lib/dice";
+import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import { normalizeSpellTrackingKey } from "@/views/character/CharacterSheetUtils";
 import type { HpChoice } from "@/views/level-up/LevelUpTypes";
 

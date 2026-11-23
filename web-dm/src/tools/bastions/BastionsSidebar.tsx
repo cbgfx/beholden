@@ -1,7 +1,7 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
-import type { Bastion } from "@/tools/bastions/types";
+import type { Bastion } from "@beholden/shared/api/bastions";
 
 export function BastionsSidebar(props: {
   campaignId: string;

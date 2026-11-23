@@ -1,6 +1,6 @@
 import type { CampaignCharacter } from "@/domain/types/domain";
 import { specialFacilitySlotsForLevel, type SpecialFacilitySlotStep } from "@beholden/shared/domain/bastionFacilities";
-import type { Bastion, CompendiumFacility } from "@/tools/bastions/types";
+import type { Bastion, CompendiumFacility } from "@beholden/shared/api/bastions";
 
 function selectedLevelFromAssignments(bastion: Bastion, players: CampaignCharacter[]): number {
   return Math.max(

@@ -183,14 +183,14 @@ update are left untouched and cause the pull to stop instead of being overwritte
 
 ### 5. First login
 
-On first run a default admin account is created:
+On first run an admin account named `admin` is created with a random password, printed once in the
+server log:
 
 ```
-Username: admin
-Password: admin
+[beholden] One-time generated admin password: <random>
 ```
 
-Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER` / `BEHOLDEN_ADMIN_PASS` in `.env` before the first run.
+Change it via Admin -> Users after signing in, or set `BEHOLDEN_ADMIN_USER` / `BEHOLDEN_ADMIN_PASS` in `.env` before the first run.
 
 ---
 
@@ -207,11 +207,15 @@ Change the password immediately via Admin -> Users, or set `BEHOLDEN_ADMIN_USER`
 | `BEHOLDEN_DATA_DIR` | Platform default | Directory for the SQLite database and uploaded images |
 | `BEHOLDEN_DB_PATH` | `<data_dir>/beholden.db` | Override the database file path |
 | `BEHOLDEN_ADMIN_USER` | `admin` | Initial admin username (used only on first run) |
-| `BEHOLDEN_ADMIN_PASS` | `admin` | Initial admin password (used only on first run) |
-| `BEHOLDEN_JWT_SECRET` | Generated per installation | Optional private JWT signing secret. Without it, a durable key is stored as `jwt-secret` in the data directory. Empty values and the old public default are rejected. |
+| `BEHOLDEN_ADMIN_PASS` | Random, printed once | Initial admin password (used only on first run) |
+| `BEHOLDEN_ALLOWED_ORIGINS` | Empty | Comma-separated origins (e.g. `https://dm.example.com`) allowed to call the API and open the WebSocket with a user's session, besides the app's own origin. Only needed when a web app is served from a different host than the API. |
+| `BEHOLDEN_TRUST_PROXY` | Off | What sits in front of the server: `true` for one reverse proxy (Railway, nginx, Caddy), a number for a chain of that many, or `cloudflare` to read `CF-Connecting-IP`. Leave unset when clients connect directly, or they can spoof their address. |
 | `BEHOLDEN_SUPPORT` | `false` | Show a support link in the UI |
 | `BEHOLDEN_RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window in ms |
 | `BEHOLDEN_RATE_LIMIT_MAX` | `5000` | Max requests per window |
+| `BEHOLDEN_LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | Window for the login limits below |
+| `BEHOLDEN_LOGIN_RATE_LIMIT_MAX` | `10` | Login attempts per window for one username from one address |
+| `BEHOLDEN_LOGIN_ACCOUNT_RATE_LIMIT_MAX` | `50` | Login attempts per window for one username from all addresses combined |
 | `BEHOLDEN_UPLOAD_RATE_LIMIT_WINDOW_MS` | `900000` | Window for the separate, tighter image-upload limit |
 | `BEHOLDEN_UPLOAD_RATE_LIMIT_MAX` | `60` | Max image uploads per window, per client |
 | `BEHOLDEN_IMAGE_MAX_UPLOAD_MB` | `12` | Largest portrait accepted before it is downscaled (1-100) |
@@ -234,6 +238,8 @@ repository root. The backend already serves both compiled web apps:
 - Start command: `node server/dist/runtime/main.js` (avoids npm wrapper processes)
 - Healthcheck path: `/api/health`
 - Set `NODE_ENV=production`, `BEHOLDEN_DATA_DIR=/data`, and mount the persistent volume at `/data`.
+- Set `BEHOLDEN_TRUST_PROXY=true`. Railway's edge proxy sits in front of the service; without this,
+  every visitor appears to come from the proxy's address, so the login limiter treats them all as one client.
 - Leave `BEHOLDEN_PUBLIC_API_ORIGIN` unset at runtime for this same-origin deployment.
 - Leave `VITE_API_ORIGIN` and `VITE_WS_ORIGIN` unset when building so API requests and live updates use the same origin.
 - Open the DM app at `/` and the Player app at `/player/` on the service domain.
@@ -249,7 +255,7 @@ volume; no database transfer is needed. Set its root directory to the repository
 root and apply the commands above. Clear frontend-only watch filters, or include
 `server/**`, `shared/**`, `web-dm/**`, `web-player/**`, `package.json`, and
 `package-lock.json` so changes to either app rebuild the consolidated deployment.
-Keep existing database-path settings and the JWT signing key. Use one replica with
+Keep existing database-path settings (`BEHOLDEN_JWT_SECRET` is no longer used and can be removed). Use one replica with
 the existing SQLite volume. If `BEHOLDEN_ALLOWED_ORIGINS` is configured, include the
 consolidated public origin (and any custom domain) in that allowlist. Deploy,
 verify `/api/health`, `/`, `/player/`, login,
@@ -280,6 +286,13 @@ useful when separate frontend domains are required:
 Set `BEHOLDEN_DATA_DIR=/data` and mount a Railway volume at `/data` to persist the database across deploys.
 
 Set `VITE_API_ORIGIN` on both web services to point at your server's public URL (e.g. `https://api.yourapp.com`) so the frontend knows where to connect.
+On the `server` service, set `BEHOLDEN_ALLOWED_ORIGINS=https://dm.yourapp.com,https://player.yourapp.com`:
+the API only accepts signed-in requests from its own origin and the origins listed there.
+
+**Behind your own reverse proxy:** the API compares each browser request's `Origin` with the `Host`
+header it receives, so the proxy must pass the original `Host` through. Caddy and Railway do this
+by default; nginx does not, so add `proxy_set_header Host $host;` (or list the public origin in
+`BEHOLDEN_ALLOWED_ORIGINS`). Otherwise signed-in writes fail with "Origin is not allowed."
 For this separate-domain layout, build the frontends with `npm run build:web-dm`
 and `npm run build:web-player` respectively; the latter retains a `/` base.
 
@@ -351,4 +364,4 @@ rights previously granted in copies distributed under an earlier license.
 
 Campaign JSON exports (version 2) include story, private notes, party currency, and portable stash items and require DM/admin access. Replacing a campaign preserves its local memberships; importing into a different installation does not grant memberships from the file. Legacy documents preserve existing narrative/currency fields they omit.
 
-The authentication update requires signing in again. Password resets/changes and administrator role changes invalidate existing sessions. Keep the generated `jwt-secret` private and persistent alongside the data directory; installations sharing a database must share their signing configuration.
+Sign-in uses server-side cookie sessions only. Password resets/changes end a user's existing sessions, and administrator role changes take effect on the next request. Bearer tokens from older builds are no longer accepted, so anyone still holding one signs in again. `BEHOLDEN_JWT_SECRET` is no longer read, and a `jwt-secret` file left in the data directory by an older version is unused and can be deleted.

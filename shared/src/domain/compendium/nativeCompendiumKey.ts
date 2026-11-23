@@ -27,7 +27,7 @@ export function isNativeCompendiumCategory(value: string): value is NativeCompen
 // Items and the edition-specific rules categories have a composite PRIMARY KEY (id, ruleset)
 // -- bare id membership isn't enough to tell "already exists" from "new" for these categories, so
 // their ids are read alongside ruleset and composite-keyed as "ruleset:id".
-export const RULESET_SCOPED_CATEGORIES = new Set<NativeCompendiumCategory>([
+const RULESET_SCOPED_CATEGORIES = new Set<NativeCompendiumCategory>([
   "monsters",
   "items",
   "classes",

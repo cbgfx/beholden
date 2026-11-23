@@ -8,7 +8,7 @@ import { useStore, type DrawerState } from "@/store";
 import type { DrawerContent } from "@/drawers/types";
 import type { CompendiumMonsterRow } from "@/views/CampaignView/monsterPicker/types";
 import type { MonsterDetail } from "@/domain/types/compendium";
-import { parseLeadingNumberLoose } from "@/views/CampaignView/monsterPicker/utils";
+import { parseLeadingNumberLoose } from "@beholden/shared/domain/monsters";
 import {
   inputStyle,
   PolymorphCreatureList,
@@ -21,7 +21,7 @@ type PolymorphDrawerState = Exclude<
   null
 >;
 
-export type PolymorphCondition = SharedPolymorphCondition;
+type PolymorphCondition = SharedPolymorphCondition;
 
 export function PolymorphDrawer(props: {
   drawer: PolymorphDrawerState;

@@ -5,11 +5,12 @@
  * No external dependencies by design.
  *
  * Configure via env:
- *   BEHOLDEN_ALLOWED_ORIGINS="https://example.com,https://localhost:5173"
- *   BEHOLDEN_BASIC_AUTH_USER="dm"
- *   BEHOLDEN_BASIC_AUTH_PASS="..."
+ *   BEHOLDEN_ALLOWED_ORIGINS="https://example.com"   extra origins besides the app's own (see isOriginAllowed)
+ *   BEHOLDEN_TRUST_PROXY="true" | N | "cloudflare"   what sits in front of the server (see proxyTrustConfig)
  *   BEHOLDEN_RATE_LIMIT_WINDOW_MS="900000"
- *   BEHOLDEN_RATE_LIMIT_MAX="2000"
+ *   BEHOLDEN_RATE_LIMIT_MAX="5000"
+ *   BEHOLDEN_LOGIN_RATE_LIMIT_MAX="10"               login attempts per address + username
+ *   BEHOLDEN_LOGIN_ACCOUNT_RATE_LIMIT_MAX="50"       login attempts per username from anywhere
  */
 
 import type express from "express";
@@ -28,11 +29,14 @@ function parseOriginHost(origin: string): string | null {
 }
 
 // MARK: - Get Allowed Origin Hosts
+/**
+ * Extra origins allowed to call the API with the user's session, from BEHOLDEN_ALLOWED_ORIGINS
+ * (comma-separated). Only needed when a web app is served from a different host than the API,
+ * e.g. a build pointed elsewhere with VITE_API_ORIGIN. Null means "none configured".
+ */
 export function getAllowedOriginHosts(): Set<string> | null {
-  // If the env var is not set we allow all origins (dev / LAN mode).
-  // Set BEHOLDEN_ALLOWED_ORIGINS to a comma-separated list to restrict.
   const raw = (process.env.BEHOLDEN_ALLOWED_ORIGINS ?? "").trim();
-  if (!raw) return null; // null = allow all
+  if (!raw) return null;
   const set = new Set<string>();
   for (const part of raw.split(",").map((s) => s.trim()).filter(Boolean)) {
     const host = parseOriginHost(part) ?? part.toLowerCase();
@@ -41,19 +45,41 @@ export function getAllowedOriginHosts(): Set<string> | null {
   return set.size ? set : null;
 }
 
+/**
+ * Whether a browser page at `origin` may make credentialed requests (or open the WebSocket).
+ *
+ * The page's own origin is always allowed: its Origin host matches the Host header it sent the
+ * request to. This also covers the Vite dev servers, whose proxies forward the original Host.
+ *
+ * Anything else must be listed in BEHOLDEN_ALLOWED_ORIGINS. This used to default to "allow all",
+ * which was not as harmless as it looked: the session cookie is SameSite=Lax, and SameSite ignores
+ * ports, so another app on the same machine or LAN IP (or a sibling subdomain) still got the cookie
+ * attached - and with CORS open it could read /api/auth/me, take the CSRF token, and act as the user.
+ */
+export function isOriginAllowed(
+  origin: string | undefined,
+  requestHost: string | undefined,
+  allowedHosts: Set<string> | null,
+): boolean {
+  // No Origin header: not a cross-origin browser request (curl, server-to-server, some same-origin GETs).
+  if (!origin) return true;
+  const host = parseOriginHost(origin);
+  if (!host) return false;
+  if (requestHost && host === requestHost.trim().toLowerCase()) return true;
+  return Boolean(allowedHosts?.has(host));
+}
+
 // MARK: - Cors Middleware
 export function corsMiddleware(allowedHosts: Set<string> | null): express.RequestHandler {
   return (req, res, next) => {
     const origin = req.headers.origin;
     if (origin) {
-      const host = parseOriginHost(origin);
-      const allowed = !allowedHosts || Boolean(host && allowedHosts.has(host));
-      if (!allowed) return res.status(403).json({ ok: false, message: "Origin is not allowed." });
-      if (allowed) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-        res.setHeader("Access-Control-Allow-Credentials", "true");
-        res.setHeader("Vary", "Origin");
+      if (!isOriginAllowed(origin, req.headers.host, allowedHosts)) {
+        return res.status(403).json({ ok: false, message: "Origin is not allowed." });
       }
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Vary", "Origin");
     }
     if (req.method === "OPTIONS") {
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -77,8 +103,62 @@ export function securityHeadersMiddleware(): express.RequestHandler {
 }
 
 // ---------------------------------------------------------------------------
-// Basic Auth
+// Client address behind a reverse proxy
+//
+// BEHOLDEN_TRUST_PROXY says what sits in front of the server:
+//   unset / "false"   nothing - use the socket address and ignore forwarding headers
+//   "true" / "yes"    one proxy that appends to X-Forwarded-For (Railway, nginx, Caddy, ...)
+//   a number N        N such proxies in a chain
+//   "cloudflare"      Cloudflare, read CF-Connecting-IP (only safe when the server is
+//                     reachable through Cloudflare alone, or anyone can send that header)
+//
+// Proxies append the address they saw to the END of X-Forwarded-For, and anything before that
+// came from the client, which can write whatever it likes there. So the client address is counted
+// from the right, one entry per trusted proxy. Reading the leftmost entry (as this used to) let a
+// client pick a new "IP" per request and walk straight past the login limiter.
 // ---------------------------------------------------------------------------
+
+type ProxyTrust = { kind: "none" } | { kind: "hops"; hops: number } | { kind: "cloudflare" };
+
+export function proxyTrustConfig(): ProxyTrust {
+  const value = String(process.env.BEHOLDEN_TRUST_PROXY ?? "").trim().toLowerCase();
+  if (value === "cloudflare") return { kind: "cloudflare" };
+  if (value === "true" || value === "yes") return { kind: "hops", hops: 1 };
+  const hops = Number(value);
+  if (Number.isInteger(hops) && hops > 0) return { kind: "hops", hops };
+  return { kind: "none" };
+}
+
+export function trustProxyHeadersEnabled(): boolean {
+  return proxyTrustConfig().kind !== "none";
+}
+
+/** The value for Express's "trust proxy" setting, so req.secure / req.protocol agree with getClientIp. */
+export function expressTrustProxySetting(): number | false {
+  const trust = proxyTrustConfig();
+  if (trust.kind === "hops") return trust.hops;
+  // Cloudflare connects to the origin directly, so it is the one hop to trust.
+  if (trust.kind === "cloudflare") return 1;
+  return false;
+}
+
+export function getClientIp(req: Pick<express.Request, "headers" | "socket">): string {
+  const socketAddress = req.socket.remoteAddress ?? "unknown";
+  const trust = proxyTrustConfig();
+  if (trust.kind === "none") return socketAddress;
+
+  if (trust.kind === "cloudflare") {
+    const cf = req.headers["cf-connecting-ip"];
+    return typeof cf === "string" && cf.trim() ? cf.trim() : socketAddress;
+  }
+
+  // The chain as the server sees it: whatever the client claimed, then each proxy's addition,
+  // then the proxy that actually connected to us. Step back one entry per trusted proxy.
+  const forwarded = String(req.headers["x-forwarded-for"] ?? "")
+    .split(",").map((entry) => entry.trim()).filter(Boolean);
+  const chain = [...forwarded, socketAddress];
+  return chain[Math.max(0, chain.length - 1 - trust.hops)] ?? socketAddress;
+}
 
 // ---------------------------------------------------------------------------
 // Rate limiter
@@ -88,24 +168,6 @@ export function securityHeadersMiddleware(): express.RequestHandler {
 // connections, not request-response cycles, and should never count against
 // the HTTP budget.
 // ---------------------------------------------------------------------------
-
-export function trustProxyHeadersEnabled(): boolean {
-  const value = String(process.env.BEHOLDEN_TRUST_PROXY ?? "").trim().toLowerCase();
-  return value === "1" || value === "true" || value === "yes";
-}
-
-export function getClientIp(req: express.Request): string {
-  if (!trustProxyHeadersEnabled()) return req.socket.remoteAddress ?? "unknown";
-  const cf = req.headers["cf-connecting-ip"];
-  if (typeof cf === "string" && cf.trim().length) return cf.trim();
-
-  const real = req.headers["x-real-ip"];
-  if (typeof real === "string" && real.trim().length) return real.trim();
-
-  const xf = req.headers["x-forwarded-for"];
-  if (typeof xf === "string" && xf.trim().length) return xf.split(",")[0]!.trim();
-  return req.socket.remoteAddress ?? "unknown";
-}
 
 function getRateLimitKey(req: express.Request): string {
   if (req.user?.userId) return `user:${req.user.userId}`;
@@ -200,8 +262,16 @@ export function getRateLimitConfig() {
   return { windowMs, max, enabled };
 }
 
-/** Login attempts survive restarts and are shared by every process using the database. */
-export function createDurableLoginRateLimiter(db: Db, opts: { windowMs: number; max: number; onBlocked?: (req: express.Request) => void }) {
+/**
+ * Login attempts survive restarts and are shared by every process using the database.
+ *
+ * Two buckets are counted per attempt:
+ *   - IP + username (`max`): the normal limit, so one person mistyping does not affect anyone else.
+ *   - username alone (`accountMax`): caps guesses against one account however many addresses the
+ *     guesses come from. It is deliberately much looser, because anyone can spend it on someone
+ *     else's username and briefly lock them out.
+ */
+export function createDurableLoginRateLimiter(db: Db, opts: { windowMs: number; max: number; accountMax: number; onBlocked?: (req: express.Request) => void }) {
   let requests = 0;
   const consume = db.transaction((key: string, nowMs: number) => {
     const row = db.prepare("SELECT attempt_count,reset_at FROM auth_login_limits WHERE bucket_key=?")
@@ -220,9 +290,17 @@ export function createDurableLoginRateLimiter(db: Db, opts: { windowMs: number; 
     requests += 1;
     if (requests % 100 === 0) db.prepare("DELETE FROM auth_login_limits WHERE reset_at<=?").run(Date.now());
     const username = String((req.body as { username?: unknown } | undefined)?.username ?? "unknown").trim().toLowerCase() || "unknown";
-    const bucket = consume(`${getClientIp(req)}:${username}`, Date.now());
-    if (bucket.count <= opts.max) return next();
-    const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - Date.now()) / 1000));
+    const nowMs = Date.now();
+    const perAddress = consume(`${getClientIp(req)}:${username}`, nowMs);
+    const perAccount = consume(`account:${username}`, nowMs);
+    // Whichever bucket is over its limit decides how long to wait (the later reset if both are).
+    const blocking = [
+      ...(perAddress.count > opts.max ? [perAddress] : []),
+      ...(perAccount.count > opts.accountMax ? [perAccount] : []),
+    ];
+    if (blocking.length === 0) return next();
+    const resetAt = Math.max(...blocking.map((bucket) => bucket.resetAt));
+    const retryAfterSeconds = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
     opts.onBlocked?.(req);
     res.setHeader("Retry-After", String(retryAfterSeconds));
     res.status(429).json({ error: "rate_limited", message: `Too many requests. Please wait ${retryAfterSeconds} seconds and try again.`, retryAfterSeconds });
@@ -232,8 +310,12 @@ export function createDurableLoginRateLimiter(db: Db, opts: { windowMs: number; 
 export function getLoginRateLimitConfig() {
   const windowMs = Number(process.env.BEHOLDEN_LOGIN_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000);
   const max = Number(process.env.BEHOLDEN_LOGIN_RATE_LIMIT_MAX ?? 10);
+  // Per-account ceiling across all addresses: 50 per 15 minutes stops a distributed guessing run
+  // while leaving a real user plenty of room if someone else is hammering their username.
+  const configuredAccountMax = Number(process.env.BEHOLDEN_LOGIN_ACCOUNT_RATE_LIMIT_MAX ?? 50);
+  const accountMax = Number.isFinite(configuredAccountMax) && configuredAccountMax > 0 ? configuredAccountMax : 50;
   const enabled = Number.isFinite(windowMs) && Number.isFinite(max) && windowMs > 0 && max > 0;
-  return { windowMs, max, enabled };
+  return { windowMs, max, accountMax, enabled };
 }
 
 // MARK: - Get Upload Rate Limit Config

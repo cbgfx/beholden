@@ -22,7 +22,7 @@ export type CharacterSheetStats = {
 };
 
 /** A section heading used inside stat blocks (collapsible when given `onToggle`). */
-export function StatSectionTitle(props: {
+function StatSectionTitle(props: {
   children: React.ReactNode;
   actions?: React.ReactNode;
   collapsed?: boolean;
@@ -45,7 +45,7 @@ export function StatSectionTitle(props: {
 }
 
 /** One vital (AC, hit points, speed): a small caption over an icon and a value. */
-export function StatBar(props: { icon: React.ReactNode; label: string; value: React.ReactNode; flex?: number; compact?: boolean }) {
+function StatBar(props: { icon: React.ReactNode; label: string; value: React.ReactNode; flex?: number; compact?: boolean }) {
   return (
     <div
       style={{

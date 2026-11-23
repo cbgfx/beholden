@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ExpandableNoteItem } from "./ExpandableNoteItem";
 import { withAlpha } from "./colors";
+import { safeLinkHref } from "./markdownHtml";
 import { IconPencil, IconTrash } from "../icons";
 
 const mentionLinkStyle: React.CSSProperties = {
@@ -46,7 +47,8 @@ function renderInlineRichText(text: string, validMentionIds?: Set<string>, binde
 
     const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (link) {
-      const rawHref = /^\s*javascript:/i.test(link[2]) ? undefined : link[2];
+      // Same allowlist the editor uses; anything else is shown as plain text.
+      const rawHref = safeLinkHref(link[2]) ?? undefined;
       const href = rawHref && binderId && rawHref.startsWith("/binder/")
         ? rawHref.replace(/^\/binder\/[^/]+/, `/binder/${binderId}`)
         : rawHref;

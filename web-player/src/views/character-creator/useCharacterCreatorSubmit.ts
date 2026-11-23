@@ -1,4 +1,3 @@
-import type { ClassSpellSelection } from "@/domain/character/classSpellSelections";
 import { requirementBlocks, validAsiAllocation, type ProgressionRequirement } from "@beholden/shared/domain/progressionRequirements";
 import React from "react";
 import type { UiTranslator } from "@beholden/shared/i18n";
@@ -6,7 +5,7 @@ import { type NavigateFunction } from "react-router-dom";
 import { api, jsonInit } from "@/services/api";
 import { imageUploadForm } from "@beholden/shared/api/imageUpload";
 import { createMyCharacter } from "@/services/actorApi";
-import { buildCreatorSubmissionBody } from "@/views/character-creator/creatorSubmission";
+import { buildCreatorSubmissionBody, type CreatorSubmissionArgs } from "@/views/character-creator/creatorSubmission";
 import { collectProficiencyChoiceEffectsFromEffects } from "@/domain/character/parseFeatureEffects";
 import { useUiTranslation } from "@beholden/shared/i18n";
 import {
@@ -17,24 +16,8 @@ import {
   getWeaponMasteryChoice,
   parseAppliedClassFeatureEffects,
 } from "@/views/character-creator/utils/CharacterCreatorProficiencyUtils";
-import type {
-  BgDetail,
-  ClassDetail,
-  ClassSummary,
-  LevelUpFeatDetail,
-  LevelUpFeatSelection,
-  RaceDetail,
-  SpellSummary,
-} from "@/views/character-creator/utils/CharacterCreatorTypes";
-import type {
-  ParsedFeatDetailLike as BackgroundFeat,
-} from "@/views/character-creator/utils/FeatChoiceTypes";
+import type { BgDetail, ClassDetail, RaceDetail } from "@/views/character-creator/utils/CharacterCreatorTypes";
 import type { FormState } from "@/views/character-creator/utils/CharacterCreatorFormUtils";
-import type { ParsedFeatChoiceLike as ParsedFeatChoice } from "@/views/character-creator/utils/FeatChoiceTypes";
-import type { ProficiencyMap } from "@/views/character/CharacterSheetTypes";
-import type { ProgressionReplacementEvent, ProgressionSelectionOccurrence } from "@beholden/shared/domain/progressionOwnership";
-
-type NamedOption = { id: string; name: string };
 
 function creationTokenForDraft(isEditing: boolean): string {
   if (isEditing) return "";
@@ -110,52 +93,11 @@ function findCreatorSubmissionProblem(args: {
   return null;
 }
 
-export function useCharacterCreatorSubmit(args: {
+export function useCharacterCreatorSubmit(args: Omit<CreatorSubmissionArgs, "api"> & {
   requirements: ProgressionRequirement[];
-  form: FormState;
-  classDetail: ClassDetail | null;
-  selectedClassSummary: ClassSummary | null;
-  raceDetail: RaceDetail | null;
-  bgDetail: BgDetail | null;
-  featDetailCache: Record<string, BackgroundFeat>;
-  resolvedRaceFeatDetail: BackgroundFeat | null;
-  resolvedBgOriginFeatDetail: BackgroundFeat | null;
-  classFeatDetails: Record<string, BackgroundFeat>;
-  levelUpFeatDetails: LevelUpFeatDetail[];
-  featSpellChoiceOptions: Record<string, NamedOption[]>;
-  growthOptionEntriesByKey: Record<string, NamedOption[]>;
-  classCantrips: SpellSummary[];
-  classSpells: SpellSummary[];
-  classInvocations: SpellSummary[];
-  isEditing: boolean;
-  fallbackClassName?: string | null;
-  fallbackHitDie?: number | null;
-  fallbackSpecies?: string | null;
-  existingHpCurrent?: number | null;
-  existingHpMax?: number | null;
-  existingHpProgressionHistory?: unknown[];
-  existingCharacterRevision?: number | null;
-  existingClassSpellSelections?: Record<string, ClassSpellSelection>;
-  existingExtraFeatIds: string[];
-  existingInvocationFeatIds: string[];
-  existingSpells?: Array<{ id?: string; name?: string; level?: number | null; classEntryId?: string | null; prepared?: boolean }>;
-  existingInvocations?: Array<{ id?: string; level?: number | null }>;
-  existingAcquisitionLevels?: Record<string, number | null>;
-  preservedLevelUpFeats?: LevelUpFeatSelection[];
-  preservedLevelUpFeatOptions?: Record<string, string[]>;
-  existingClasses?: Array<{ id?: string; classId?: string | null; className?: string | null; level?: number; subclass?: string | null }>;
-  existingSelectedFeatureNames?: string[];
-  existingProficiencies?: Partial<ProficiencyMap>;
-  existingProgressionSelectionOccurrences?: ProgressionSelectionOccurrence[];
-  existingProgressionReplacementEvents?: ProgressionReplacementEvent[];
-  existingProgressionHpEffects?: Array<{ sourceKey: string; multiplier: number; classEntryId?: string; classLevel?: number }>;
   editId?: string;
   portraitFile: File | null;
   initialCampaignIdsRef: React.MutableRefObject<string[]>;
-  classifyFeatSelection: (
-    choice: ParsedFeatChoice<string>,
-    value: string,
-  ) => "skill" | "tool" | "language" | "armor" | "weapon" | "saving_throw" | "weapon_mastery" | "maneuver" | null;
   navigate: NavigateFunction;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }) {

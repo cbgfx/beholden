@@ -44,7 +44,7 @@ function ColumnIcon({ icon, size }: { icon: ColumnIconId; size: number }) {
   const Icon = icons[icon as keyof typeof icons];
   return <Icon size={size} />;
 }
-export function sheetColumnPresentation(view: ColumnView, index: number) {
+function sheetColumnPresentation(view: ColumnView, index: number) {
   const fallback = view.columnDefaults?.[index];
   return {
     name: view.columnHeaders?.[index]?.name,

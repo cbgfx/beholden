@@ -8,8 +8,7 @@ import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
-import { signToken } from "../../lib/jwtAuth.js";
-import { requireAuth } from "../../middleware/auth.js";
+import { signToken, testAuth } from "../../tests/helpers/testAuth.js";
 import { registerCombatRoutes } from "./core.js";
 import { registerCharacterRoutes } from "../characters/core.js";
 import { insertCombatant, createPlayerCombatant } from "../../services/combat.js";
@@ -23,9 +22,9 @@ export type ConditionEntry = { key: string; casterId?: string | null; concentrat
 
 export let db: Database.Database;
 
-export let server: http.Server;
+let server: http.Server;
 
-export let port: number;
+let port: number;
 
 export let broadcasts: BroadcastEvent[] = [];
 
@@ -43,9 +42,9 @@ export let playerRowId: string;
 
 export let playerCharacterId: string;
 
-export const playerUserId = "test-player-user";
+const playerUserId = "test-player-user";
 
-export const dmToken = signToken({ userId: "test-dm", username: "dm", isAdmin: true });
+const dmToken = signToken({ userId: "test-dm", username: "dm", isAdmin: true });
 
 export let playerToken: string;
 
@@ -231,7 +230,7 @@ before(async () => {
 
     const app = express();
     app.use(express.json());
-    app.use("/api", requireAuth);
+    app.use("/api", testAuth);
     registerCombatRoutes(app, ctx);
     registerCharacterRoutes(app, ctx);
 

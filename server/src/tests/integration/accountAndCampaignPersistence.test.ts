@@ -1,19 +1,18 @@
 import { it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import express from "express";
 import { createServer } from "node:http";
 import WebSocket from "ws";
 import { createWsServer } from "../../server/ws.js";
+import { isOriginAllowed } from "../../server/security.js";
 import multer from "multer";
 import Database from "better-sqlite3";
 import { SCHEMA_SQL } from "../../lib/dbSchema.js";
 import { openDb } from "../../lib/db.js";
-import { loadSigningSecret, hashPassword, credentialVersion, signToken, verifyToken, currentTokenUser } from "../../lib/jwtAuth.js";
+import { hashPassword } from "../../lib/passwords.js";
+import { createSession, currentSessionUser } from "../../lib/sessionAuth.js";
 import { requireCurrentAccount } from "../../middleware/auth.js";
 import { registerAuthRoutes } from "../../routes/authRoutes.js";
 import { registerAdminRoutes } from "../../routes/adminRoutes.js";
@@ -22,12 +21,21 @@ import { importCampaignDocument } from "../../routes/exportImport/helpers.js";
 import { zodErrorMiddleware } from "../../lib/validate.js";
 import type { ServerContext } from "../../server/context.js";
 
+/** The headers a signed-in browser tab sends: its session cookie, and the CSRF proof for writes. */
+type SessionHeaders = { Cookie: string; "X-Beholden-CSRF": string };
+
+/** Opens a real server-side session for a user, exactly as a successful login would. */
+function sessionFor(db: ReturnType<typeof openDb>, userId: string): SessionHeaders {
+  const session = createSession(db, userId);
+  return { Cookie: `beholden_session=${encodeURIComponent(session.token)}`, "X-Beholden-CSRF": session.csrfToken };
+}
+
 async function fixture() {
   // Fully migrated, like production: campaign export reads columns added by migrations (Binder links).
   const db = openDb(":memory:");
   const passhash = hashPassword("initial-password");
   for (const id of ["admin", "other"]) db.prepare("INSERT INTO users (id, username, name, passhash, is_admin, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, 1)").run(id, id, id, passhash);
-  const token = signToken({ userId: "admin", username: "admin", isAdmin: true, credentialVersion: credentialVersion(passhash) });
+  const adminSession = sessionFor(db, "admin");
   const upload = multer({ storage: multer.memoryStorage() });
   const ctx = { db, upload, imageUpload: upload, dbImportUpload: upload, broadcast: () => {}, helpers: { now: Date.now, uid: randomUUID } } as unknown as ServerContext;
   const app = express(); app.use(express.json());
@@ -37,7 +45,10 @@ async function fixture() {
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>(resolve => server.once("listening", resolve));
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  return { db, token, request: (url: string, init: RequestInit = {}, auth = token) => fetch(origin + url, { ...init, headers: { Authorization: `Bearer ${auth}`, ...init.headers } }),
+  // `auth` defaults to the admin's session; pass another session, or null to send no credentials.
+  return { db, session: (userId: string) => sessionFor(db, userId),
+    request: (url: string, init: RequestInit = {}, auth: SessionHeaders | null = adminSession) =>
+      fetch(origin + url, { ...init, headers: { ...(auth ?? {}), ...init.headers } }),
     close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); db.close(); } };
 }
 const put = (body: unknown): RequestInit => ({ method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -46,7 +57,7 @@ it("DM workspace preferences persist per account and workspace and reject invali
   const f = await fixture();
   try {
     const preferences = { activeId: "prep", views: [{ id: "prep", name: "Prep", columns: [["players"], ["notes"]], colors: { notes: { accent: "#abcdef" } }, appearance: {} }] };
-    const other = signToken({ userId: "other", username: "other", isAdmin: true, credentialVersion: credentialVersion((f.db.prepare("SELECT passhash FROM users WHERE id='other'").get() as { passhash: string }).passhash) });
+    const other = f.session("other");
     assert.equal((await f.request("/api/me/workspaces/campaign", put({ ...preferences, expectedRevision: null }))).status, 200);
     const loaded = await (await f.request("/api/me/workspaces/campaign")).json() as typeof preferences & { revision: string };
     assert.deepEqual({ activeId: loaded.activeId, views: loaded.views }, preferences);
@@ -58,27 +69,28 @@ it("DM workspace preferences persist per account and workspace and reject invali
   } finally { await f.close(); }
 });
 
-it("installation keys persist, differ across installations, and reject unsafe configuration", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "beholden-audit-key-"));
+it("bearer tokens are not accepted: a request is on a session or it is not signed in", async () => {
+  const f = await fixture();
   try {
-    const first = loadSigningSecret(path.join(dir, "a"));
-    assert.equal(loadSigningSecret(path.join(dir, "a")), first);
-    assert.notEqual(loadSigningSecret(path.join(dir, "b")), first);
-    assert.throws(() => loadSigningSecret(dir, ""));
-    assert.throws(() => loadSigningSecret(dir, "beholden-dev-secret-change-in-prod"));
-    assert.equal(loadSigningSecret(dir, "configured-private-key"), "configured-private-key");
-    assert.equal(verifyToken(signToken({ userId: "", username: "bad", isAdmin: true })), null);
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+    // Whatever the Authorization header carries, without a session cookie the answer is 401.
+    const response = await f.request("/api/auth/me", { headers: { Authorization: "Bearer anything" } }, null);
+    assert.equal(response.status, 401);
+    // And the endpoint that turned an old bearer token into a session is gone with it.
+    assert.equal((await f.request("/api/auth/migrate", { method: "POST", headers: { Authorization: "Bearer anything" } }, null)).status, 401);
+  } finally { await f.close(); }
 });
 
-for (const action of ["demote", "delete", "reset"]) it(`protected HTTP routes reject old tokens after ${action}`, async () => {
+// What the target admin's existing session gets on an admin-only route after another admin acts.
+const afterAction = { demote: 403, delete: 401, reset: 401 } as const;
+for (const action of ["demote", "delete", "reset"] as const) it(`an existing session loses admin access after ${action}`, async () => {
   const f = await fixture();
   try {
     assert.equal((await f.request("/api/admin/users")).status, 200);
-    const other = signToken({ userId: "other", username: "other", isAdmin: true, credentialVersion: credentialVersion((f.db.prepare("SELECT passhash FROM users WHERE id='other'").get() as { passhash: string }).passhash) });
-    const response = await f.request("/api/admin/users/admin", action === "delete" ? { method: "DELETE" } : put(action === "demote" ? { isAdmin: false } : { password: "replacement" }), other);
+    const response = await f.request("/api/admin/users/admin", action === "delete" ? { method: "DELETE" } : put(action === "demote" ? { isAdmin: false } : { password: "replacement" }), f.session("other"));
     assert.equal(response.status, 200);
-    assert.equal((await f.request("/api/admin/users")).status, 401);
+    // Demotion keeps the session (the user is still signed in) but admin status is read live, so
+    // admin routes refuse at once. A password reset or deletion ends the session outright.
+    assert.equal((await f.request("/api/admin/users")).status, afterAction[action]);
   } finally { await f.close(); }
 });
 
@@ -91,9 +103,10 @@ it("self-service password changes verify the current password and revoke the pre
     const response = await f.request("/api/me/profile", put({ newPassword: "replacement", currentPassword: "initial-password" }));
     assert.equal(response.status, 200);
     assert.equal((await f.request("/api/admin/users")).status, 401);
-    const updatedHash = (f.db.prepare("SELECT passhash FROM users WHERE id='admin'").get() as { passhash: string }).passhash;
-    const updatedToken = signToken({ userId: "admin", username: "admin", isAdmin: true, credentialVersion: credentialVersion(updatedHash) });
-    assert.equal((await f.request("/api/admin/users", {}, updatedToken)).status, 200);
+    // The response set a fresh session for the tab that made the change; that one works.
+    const cookie = response.headers.get("set-cookie")!.split(";")[0]!;
+    const { csrfToken } = await response.json() as { csrfToken: string };
+    assert.equal((await f.request("/api/admin/users", {}, { Cookie: cookie, "X-Beholden-CSRF": csrfToken })).status, 200);
   } finally { await f.close(); }
 });
 
@@ -102,7 +115,7 @@ it("login failures are generic, auth responses are never cached, and existing cr
   try {
     const login = (username: string, password: string) => f.request("/api/auth/login", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }),
-    }, "");
+    }, null);
     const unknown = await login("missing", "wrong");
     const incorrect = await login("admin", "wrong");
     assert.equal(unknown.status, 401);
@@ -128,7 +141,7 @@ it("cookie sessions require CSRF for writes and logout revokes the server sessio
     const login = await f.request("/api/auth/login", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: "admin", password: "initial-password" }),
-    }, "");
+    }, null);
     assert.equal(login.status, 200);
     const body = await login.json() as { csrfToken: string; token?: string };
     assert.equal(body.token, undefined, "new logins do not expose a bearer credential");
@@ -137,20 +150,20 @@ it("cookie sessions require CSRF for writes and logout revokes the server sessio
 
     const withoutCsrf = await f.request("/api/me/profile", {
       ...put({ textScale: 1.2 }), headers: { "Content-Type": "application/json", Cookie: cookie! },
-    }, "");
+    }, null);
     assert.equal(withoutCsrf.status, 403);
     assert.equal((await withoutCsrf.json() as { code: string }).code, "invalid-csrf");
 
     const changed = await f.request("/api/me/profile", {
       ...put({ textScale: 1.2 }), headers: { "Content-Type": "application/json", Cookie: cookie!, "X-Beholden-CSRF": body.csrfToken },
-    }, "");
+    }, null);
     assert.equal(changed.status, 200);
 
     const logout = await f.request("/api/auth/logout", {
       method: "POST", headers: { Cookie: cookie!, "X-Beholden-CSRF": body.csrfToken },
-    }, "");
+    }, null);
     assert.equal(logout.status, 200);
-    assert.equal((await f.request("/api/auth/me", { headers: { Cookie: cookie! } }, "")).status, 401);
+    assert.equal((await f.request("/api/auth/me", { headers: { Cookie: cookie! } }, null)).status, 401);
   } finally { await f.close(); }
 });
 
@@ -226,20 +239,19 @@ it("campaign backups containing private notes require DM access", async () => {
     f.db.prepare("INSERT INTO campaigns(id,name,created_at,updated_at) VALUES ('c','Private',1,1)").run();
     f.db.prepare("UPDATE users SET is_admin=0 WHERE id='other'").run();
     f.db.prepare("INSERT INTO campaign_membership VALUES ('m','c','other','player',1,1)").run();
-    const hash = (f.db.prepare("SELECT passhash FROM users WHERE id='other'").get() as { passhash: string }).passhash;
-    const token = signToken({ userId: "other", username: "other", isAdmin: false, credentialVersion: credentialVersion(hash) });
-    assert.equal((await f.request("/api/campaigns/c/export", {}, token)).status, 403);
+    assert.equal((await f.request("/api/campaigns/c/export", {}, f.session("other"))).status, 403);
   } finally { await f.close(); }
 });
 
 it("an established WebSocket closes after account revocation", async () => {
   const db = new Database(":memory:"); db.exec(SCHEMA_SQL);
   db.prepare("INSERT INTO users(id,username,name,passhash,is_admin,created_at,updated_at) VALUES ('u','u','u','hash',1,1,1)").run();
-  const token = signToken({ userId: "u", username: "u", isAdmin: true, credentialVersion: credentialVersion("hash") });
+  const { Cookie } = sessionFor(db as unknown as ReturnType<typeof openDb>, "u");
   const server = createServer();
-  const wss = createWsServer({ httpServer: server, authorize: () => currentTokenUser(db, verifyToken(token)) !== null });
+  // The same session lookup production uses, re-run on every message.
+  const wss = createWsServer({ httpServer: server, authorize: (req) => currentSessionUser(db as unknown as ReturnType<typeof openDb>, req) !== null });
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
-  const socket = new WebSocket(`ws://127.0.0.1:${(server.address() as AddressInfo).port}/ws`);
+  const socket = new WebSocket(`ws://127.0.0.1:${(server.address() as AddressInfo).port}/ws`, { headers: { Cookie } });
   try {
     await new Promise<void>((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     const closed = new Promise<number>(resolve => socket.once("close", resolve));
@@ -254,21 +266,51 @@ it("an established WebSocket closes after account revocation", async () => {
   }
 });
 
+it("a WebSocket opened by another origin is refused at the handshake, even with a valid session cookie", async () => {
+  const db = new Database(":memory:"); db.exec(SCHEMA_SQL);
+  db.prepare("INSERT INTO users(id,username,name,passhash,is_admin,created_at,updated_at) VALUES ('u','u','u','hash',1,1,1)").run();
+  const { Cookie } = sessionFor(db as unknown as ReturnType<typeof openDb>, "u");
+  const server = createServer();
+  const wss = createWsServer({
+    httpServer: server,
+    allowOrigin: (req) => isOriginAllowed(req.headers.origin, req.headers.host, null),
+    authorize: (req) => currentSessionUser(db as unknown as ReturnType<typeof openDb>, req) !== null,
+  });
+  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+  const host = `127.0.0.1:${(server.address() as AddressInfo).port}`;
+  // Resolves with how the handshake went: "open", or the HTTP status it was refused with.
+  const connect = (origin: string) => new Promise<string>((resolve) => {
+    const socket = new WebSocket(`ws://${host}/ws`, { headers: { Cookie }, origin });
+    socket.once("open", () => { socket.terminate(); resolve("open"); });
+    socket.once("unexpected-response", (_req, res) => { resolve(String(res.statusCode)); socket.terminate(); });
+    socket.once("error", () => resolve("error"));
+  });
+  try {
+    // A page on the same machine but another port is "same-site", so a browser would attach the cookie.
+    assert.equal(await connect("http://127.0.0.1:8080"), "401");
+    assert.equal(await connect(`http://${host}`), "open");
+  } finally {
+    await new Promise<void>(resolve => wss.close(() => resolve()));
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    db.close();
+  }
+});
+
 
 it("parallel session reads retain one stable CSRF proof and do not break either tab's writes", async () => {
   const f = await fixture();
   try {
-    const login = await f.request("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "admin", password: "initial-password" }) }, "");
+    const login = await f.request("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "admin", password: "initial-password" }) }, null);
     const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
     const initial = await login.json() as { csrfToken: string };
-    const read = () => f.request("/api/auth/me", { headers: { Cookie: cookie } }, "").then(response => response.json()) as Promise<{ csrfToken: string }>;
+    const read = () => f.request("/api/auth/me", { headers: { Cookie: cookie } }, null).then(response => response.json()) as Promise<{ csrfToken: string }>;
     const [first, second] = await Promise.all([read(), read()]);
     assert.equal(first.csrfToken, initial.csrfToken); assert.equal(second.csrfToken, initial.csrfToken);
     for (const token of [second.csrfToken, first.csrfToken]) {
-      const response = await f.request("/api/me/profile", { ...put({ textScale: 1.1 }), headers: { "Content-Type": "application/json", Cookie: cookie, "X-Beholden-CSRF": token } }, "");
+      const response = await f.request("/api/me/profile", { ...put({ textScale: 1.1 }), headers: { "Content-Type": "application/json", Cookie: cookie, "X-Beholden-CSRF": token } }, null);
       assert.equal(response.status, 200);
     }
-    const rejected = await f.request("/api/me/profile", { ...put({ textScale: 1.1 }), headers: { "Content-Type": "application/json", Cookie: cookie, "X-Beholden-CSRF": "wrong-proof" } }, "");
+    const rejected = await f.request("/api/me/profile", { ...put({ textScale: 1.1 }), headers: { "Content-Type": "application/json", Cookie: cookie, "X-Beholden-CSRF": "wrong-proof" } }, null);
     assert.equal(rejected.status, 403);
   } finally { await f.close(); }
 });

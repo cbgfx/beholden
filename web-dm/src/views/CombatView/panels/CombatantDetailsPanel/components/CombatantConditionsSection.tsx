@@ -4,7 +4,7 @@ import type { EncounterActor } from "@/domain/types/domain";
 import { theme } from "@/theme/theme";
 import { SectionTitle } from "@/ui/SectionTitle";
 import { IconButton } from "@/ui/IconButton";
-import { conditionIconByKey } from "@/icons/conditions";
+import { conditionIconByKey } from "@beholden/shared/icons";
 import {
   buildRosterById,
   conditionLabel,

@@ -1,3 +1,6 @@
+import { BinderCompactCard } from "@beholden/shared/ui/BinderCompactCard";
+import { BinderLifeStatus } from "@beholden/shared/ui/BinderLifeStatus";
+import { BinderFilterChips } from "@beholden/shared/ui/BinderFilterChips";
 import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/ReferencedMarkdown";
 import { useWs } from "@/services/ws";
 import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
@@ -89,46 +92,11 @@ function InlineRichTextField(props: {
 function MortalCardRow(props: { record: BinderMortal; accent: string; onOpen: () => void }) {
   const translateUi = useUiTranslation("dmUi");
   const { record } = props;
-  const summary = [record.position?.name, record.race?.name, record.location?.name].filter(Boolean).join(" · ");
-  return (
-    <button
-      type="button"
-      onClick={props.onOpen}
-      style={{
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: "auto minmax(0, 1fr) auto",
-        gap: 10,
-        alignItems: "center",
-        padding: "9px 11px",
-        border: 0,
-        borderBottom: `1px solid ${theme.colors.panelBorder}`,
-        background: "transparent",
-        color: theme.colors.text,
-        font: "inherit",
-        textAlign: "left",
-        cursor: "pointer",
-      }}
-    >
-      <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} size={40} />
-      <span style={{ minWidth: 0, display: "grid", gap: 2 }}>
-        <span style={{ fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.name}</span>
-        {summary ? <span style={{ color: theme.colors.muted, fontSize: "var(--fs-small)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{summary}</span> : null}
-      </span>
-      <span
-        style={{
-          padding: "2px 7px",
-          borderRadius: 5,
-          color: "#fff",
-          background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green,
-          fontSize: "var(--fs-small)",
-          fontWeight: 800,
-        }}
-      >
-        {record.lifeStatus === "dead" ? translateUi("Dead") : translateUi("Alive")}
-      </span>
-    </button>
-  );
+  return <BinderCompactCard theme={theme.colors} title={record.name} onOpen={props.onOpen}
+    icon={<BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} size={40} />}
+    badge={<BinderLifeStatus status={record.lifeStatus ?? "alive"} translate={translateUi} theme={theme.colors} />}>
+    {[record.position?.name, record.race?.name, record.location?.name].filter(Boolean).join(" · ")}
+  </BinderCompactCard>;
 }
 
 function mortalAge(record: BinderMortal, binderCurrentDate: number | null): number | null {
@@ -364,7 +332,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
       },
       {
         key: "status", icon: <EntityIcon icon="game-icons:half-dead" size={16} />, label: translateUi("Status"),
-        node: <span style={{ display: "inline-flex", padding: "2px 7px", borderRadius: 5, color: "#fff", background: selected.lifeStatus === "dead" ? theme.colors.red : theme.colors.green, fontSize: "var(--fs-small)", fontWeight: 800 }}>{selected.lifeStatus === "dead" ? translateUi("Dead") : translateUi("Alive")}</span>,
+        node: <BinderLifeStatus status={selected.lifeStatus ?? "alive"} translate={translateUi} theme={theme.colors} />,
       },
       ...(selected.mortalType === "player_character" && selected.player?.playerName
         ? [{ key: "player", icon: <IconPlayer size={16} />, label: translateUi("Player"), node: selected.player.playerName as React.ReactNode }]
@@ -596,25 +564,11 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
         ))}
         {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => { setFilters(emptyFilters()); clearSelectedMortalView(); }}>{translateUi("Clear")}</Button> : null}
       </div> : null}
-      {Object.entries(filters).some(([, values]) => values.length) ? (
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-          {(Object.entries(filters) as Array<[keyof MortalFilters, string[]]>).flatMap(([key, values]) => values.map((value) => {
-            const label = key[0]!.toUpperCase() + key.slice(1);
-            const choice = filterChoices[key].find((item) => item.value === value);
-            return <button
-              key={`${key}:${value}`}
-              type="button"
-              aria-label={translateUi("Remove {{value1}} {{value2}} filter", { value1: label, value2: choice?.label ?? value })}
-              onClick={() => { setFilters(removeFilterValue(filters, key, value)); clearSelectedMortalView(); }}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 7px", border: `1px solid ${withAlpha(props.accent, 0.48)}`, borderRadius: 999, background: withAlpha(props.accent, 0.12), color: theme.colors.text, cursor: "pointer", font: "inherit", fontSize: "var(--fs-tiny)", lineHeight: 1.35, fontWeight: 900 }}
-            >
-              <span style={{ color: props.accent }}>{label}</span>
-              {choice?.label ?? value}
-              <span aria-hidden style={{ color: theme.colors.red, fontSize: 14, lineHeight: 1 }}>×</span>
-            </button>;
-          }))}
-        </div>
-      ) : null}
+      <BinderFilterChips filters={filters} accent={props.accent} theme={theme.colors}
+        label={(key) => key[0]!.toUpperCase() + key.slice(1)}
+        valueLabel={(key, value) => filterChoices[key].find((item) => item.value === value)?.label ?? value}
+        removeLabel={(label, value) => translateUi("Remove {{value1}} {{value2}} filter", { value1: label, value2: value })}
+        onRemove={(key, value) => { setFilters(removeFilterValue(filters, key, value)); clearSelectedMortalView(); }} />
       <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto", overflowY: "hidden" }}>
         {isNarrow ? null : <BinderListHeader
           columns={[
@@ -699,21 +653,7 @@ export function MortalWorkspace(props: { binderId: string; binderCurrentDate: nu
                     <span style={{ ...cell, color: theme.colors.red }}>{translateUi("Needs gender")}</span>
                   )}
                 </span>
-                <span
-                  style={{
-                    justifySelf: "start",
-                    display: "inline-flex",
-                    padding: "2px 7px",
-                    borderRadius: 5,
-                    color: "#fff",
-                    background: record.lifeStatus === "dead" ? theme.colors.red : theme.colors.green,
-                    fontSize: "var(--fs-small)",
-                    lineHeight: 1.3,
-                    fontWeight: 800,
-                  }}
-                >
-                  {record.lifeStatus === "dead" ? translateUi("Dead") : translateUi("Alive")}
-                </span>
+                <BinderLifeStatus status={record.lifeStatus ?? "alive"} translate={translateUi} theme={theme.colors} style={{ justifySelf: "start", lineHeight: 1.3 }} />
                 {props.canEdit ? (
                   <button
                     type="button"

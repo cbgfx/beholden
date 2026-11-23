@@ -8,10 +8,24 @@ import {
   defaultFacilitySize,
   facilityHirelings,
   facilitySizePill,
+  normalizeOrder,
+  orderListWithMaintain,
   specialFacilitySlotsForLevel,
   type BastionSpaceDefinition,
   type SizedFacilityDefinition,
 } from "@beholden/shared/domain/bastionFacilities";
+
+it("normalizes an empty order to null without changing a named order's casing", () => {
+  expect(normalizeOrder(" \t ")).toBeNull();
+  expect(normalizeOrder(undefined)).toBeNull();
+  expect(normalizeOrder("  Craft  ")).toBe("Craft");
+});
+
+it("offers Maintain once and preserves the original order labels", () => {
+  expect(orderListWithMaintain([" Craft ", "craft", "", "maintain", "MAINTAIN"]))
+    .toEqual([" Craft ", "maintain"]);
+  expect(orderListWithMaintain([])).toEqual(["Maintain"]);
+});
 
 const spaces: BastionSpaceDefinition[] = [
   { key: "cramped", name: "Cramped", sort: 0, basicUpgrade: { to: "roomy", costGp: 500 } },

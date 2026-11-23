@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import bcrypt from "bcryptjs";
-import { hashPasswordAsync, verifyPasswordAsync } from "./jwtAuth.js";
+import { hashPasswordAsync, verifyPasswordAsync } from "./passwords.js";
 
 test("password worker preserves hashes, concurrent replies, and restarts after idle release", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });

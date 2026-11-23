@@ -42,26 +42,26 @@ export const IconConditions = make("conditions");
 export const IconPlayer = make("person");
 export const IconTargeted = make("targeted");
 
-export const IconBlinded = make("blinded");
-export const IconCharmed = make("charmed");
-export const IconDeafened = make("deafened");
-export const IconFrightened = make("frightened");
-export const IconGrappled = make("grappled");
-export const IconIncapacitated = make("incapacitated");
-export const IconInvisible = make("invisible");
-export const IconMarked = make("marked");
-export const IconParalyzed = make("paralyzed");
-export const IconPetrified = make("petrified");
-export const IconPoisoned = make("poisoned");
-export const IconProne = make("prone");
-export const IconRestrained = make("restrained");
-export const IconSlow = make("speed");
-export const IconStunned = make("stunned");
-export const IconUnconscious = make("unconscious");
-export const IconConcentration = make("concentration");
-export const IconDisadvantage = make("disadvantage");
-export const IconHex = make("hexed");
-export const IconExhaustion = make("exhaustion");
+const IconBlinded = make("blinded");
+const IconCharmed = make("charmed");
+const IconDeafened = make("deafened");
+const IconFrightened = make("frightened");
+const IconGrappled = make("grappled");
+const IconIncapacitated = make("incapacitated");
+const IconInvisible = make("invisible");
+const IconMarked = make("marked");
+const IconParalyzed = make("paralyzed");
+const IconPetrified = make("petrified");
+const IconPoisoned = make("poisoned");
+const IconProne = make("prone");
+const IconRestrained = make("restrained");
+const IconSlow = make("speed");
+const IconStunned = make("stunned");
+const IconUnconscious = make("unconscious");
+const IconConcentration = make("concentration");
+const IconDisadvantage = make("disadvantage");
+const IconHex = make("hexed");
+const IconExhaustion = make("exhaustion");
 
 export const IconSpeed = make("speed");
 export const IconAC = IconShield;
@@ -81,7 +81,7 @@ export const IconDice = make("dice");
 export const IconAI = make("artificial-intelligence");
 export const IconWeight = make("weight");
 
-export const conditionIconSvgByKey: Record<string, string> = {
+const conditionIconSvgByKey: Record<string, string> = {
   blinded: fromFile("blinded"),
   charmed: fromFile("charmed"),
   deafened: fromFile("deafened"),

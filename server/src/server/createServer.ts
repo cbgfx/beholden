@@ -40,12 +40,13 @@ import {
   isImageUploadRequest,
   corsMiddleware,
   getAllowedOriginHosts,
+  isOriginAllowed,
   getLoginRateLimitConfig,
   securityHeadersMiddleware,
-  trustProxyHeadersEnabled,
+  expressTrustProxySetting,
 } from "./security.js";
 
-import { hashPassword, configureSigningSecret } from "../lib/jwtAuth.js";
+import { hashPassword } from "../lib/passwords.js";
 import { currentSessionUser } from "../lib/sessionAuth.js";
 import { recordAuthAudit } from "../lib/authAudit.js";
 import { requireCurrentAccount } from "../middleware/auth.js";
@@ -89,7 +90,6 @@ const IMAGE_MOUNTS = [
 
 export function createServer() {
   const runtime = getRuntimeConfig();
-  configureSigningSecret(runtime.dataDir);
   const paths = getPaths({ dataDir: runtime.dataDir, ...(runtime.dbPath != null ? { dbPath: runtime.dbPath } : {}) });
 
   // --- database -------------------------------------------------------------
@@ -112,7 +112,8 @@ export function createServer() {
   const app = express();
   app.disable("x-powered-by");
   app.set("etag", "strong");
-  app.set("trust proxy", trustProxyHeadersEnabled());
+  // A hop count, never `true`: `true` makes Express read the leftmost (client-written) forwarded address.
+  app.set("trust proxy", expressTrustProxySetting());
 
   const logEgress = String(process.env.BEHOLDEN_LOG_EGRESS ?? "").trim().toLowerCase();
   const shouldLogEgress = logEgress === "1" || logEgress === "true" || logEgress === "yes";
@@ -130,7 +131,8 @@ export function createServer() {
   app.use(createJsonBodyParser());
 
   // CORS — must be before basic auth so preflight and 401s carry the header
-  app.use(corsMiddleware(getAllowedOriginHosts()));
+  const allowedOriginHosts = getAllowedOriginHosts();
+  app.use(corsMiddleware(allowedOriginHosts));
   app.use(securityHeadersMiddleware());
 
   const loginRateLimit = getLoginRateLimitConfig();
@@ -279,6 +281,8 @@ export function createServer() {
   const wss = createWsServer({
     httpServer,
     path: "/ws",
+    // Same rule as the HTTP CORS check: the page's own origin, or one listed in BEHOLDEN_ALLOWED_ORIGINS.
+    allowOrigin: (req) => isOriginAllowed(req.headers.origin, req.headers.host, allowedOriginHosts),
     onConnectionHello: (ws) => {
       sendWsEvent(ws, "hello", { ok: true, time: now() });
     },

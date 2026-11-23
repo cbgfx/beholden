@@ -13,7 +13,7 @@ import { requireCampaignExists, requireParam } from "../../lib/routeHelpers.js";
 import { parseBody } from "../../lib/validate.js";
 import { exportBinderDocument, importBinderDocument, previewBinderDocument } from "../../services/binders/nativeBinder.js";
 import * as archiverModule from "archiver";
-import { unzipSync } from "fflate";
+import { Unzip, UnzipInflate } from "fflate";
 import { EntityNameSchema } from "../../lib/schemas.js";
 import { errorMessage } from "../../lib/errors.js";
 import { prepareUploadedImage } from "../../lib/imageHelpers.js";
@@ -32,21 +32,66 @@ function imageMimeType(name: string): string | null {
   return ({ ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" } as Record<string, string>)[extension] ?? null;
 }
 
+/**
+ * Unpacks binder.json and images/* from a Binder ZIP, enforcing the size limits on the bytes that
+ * actually come out of the decompressor.
+ *
+ * The sizes in a ZIP's headers are whatever the file's author wrote there. Checking only those (as
+ * unzipSync's filter did) let a small archive that understates its sizes inflate far past the
+ * limits. Each entry is now counted as it streams out, and the read stops the moment a limit is hit.
+ */
+const LIMIT_ERROR = "binderArchiveLimit";
+const limitError = (message: string) => Object.assign(new Error(message), { [LIMIT_ERROR]: true });
+
+export function unzipBinderArchive(buffer: Buffer): Record<string, Uint8Array> {
+  const entries: Record<string, Uint8Array> = {};
+  let entryCount = 0;
+  let expandedBytes = 0;
+  const unzip = new Unzip((file) => {
+    entryCount += 1;
+    if (entryCount > MAX_BINDER_ARCHIVE_ENTRIES) throw new Error("Binder ZIP contains too many files");
+    // Anything else in the archive is skipped without ever being decompressed.
+    if (file.name !== "binder.json" && !file.name.startsWith("images/")) return;
+    const isImage = file.name.startsWith("images/");
+    const entryLimit = isImage ? MAX_BINDER_IMAGE_BYTES : MAX_BINDER_ARCHIVE_BYTES;
+    // Refuse early on an honest header; the running count below catches a dishonest one.
+    if ((file.originalSize ?? 0) > entryLimit) {
+      throw new Error(isImage ? `Binder image exceeds the 10 MB limit: ${file.name}` : "Binder ZIP expands beyond the 100 MB limit");
+    }
+    const chunks: Uint8Array[] = [];
+    let entryBytes = 0;
+    file.ondata = (error, bytes, final) => {
+      if (error) {
+        // fflate catches what this callback throws and hands it straight back as `error`, so a
+        // limit we raised below arrives here: pass it on rather than relabelling it.
+        if (LIMIT_ERROR in error) throw error;
+        throw new Error(`Binder ZIP contains an invalid compressed entry: ${file.name}`);
+      }
+      entryBytes += bytes.length;
+      expandedBytes += bytes.length;
+      if (isImage && entryBytes > MAX_BINDER_IMAGE_BYTES) throw limitError(`Binder image exceeds the 10 MB limit: ${file.name}`);
+      if (entryBytes > MAX_BINDER_ARCHIVE_BYTES || expandedBytes > MAX_BINDER_ARCHIVE_BYTES) {
+        throw limitError("Binder ZIP expands beyond the 100 MB limit");
+      }
+      chunks.push(bytes);
+      if (final) entries[file.name] = Buffer.concat(chunks);
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
+  // Pushing in slices keeps each burst of inflated output small enough to check before it piles up.
+  const SLICE = 64 * 1024;
+  for (let offset = 0; offset < buffer.length; offset += SLICE) {
+    unzip.push(new Uint8Array(buffer.buffer, buffer.byteOffset + offset, Math.min(SLICE, buffer.length - offset)));
+  }
+  unzip.push(new Uint8Array(), true);
+  return entries;
+}
+
 async function parseBinderUpload(file: Express.Multer.File) {
   const isZip = file.mimetype === "application/zip" || file.originalname.toLowerCase().endsWith(".zip");
   if (!isZip) return { raw: JSON.parse(file.buffer.toString("utf8")) as unknown, images: new Map<string, Uint8Array>() };
-  let archiveEntryCount = 0;
-  let expandedBytes = 0;
-  const entries = unzipSync(new Uint8Array(file.buffer), { filter: (entry) => {
-    archiveEntryCount += 1;
-    expandedBytes += entry.originalSize;
-    if (archiveEntryCount > MAX_BINDER_ARCHIVE_ENTRIES) throw new Error("Binder ZIP contains too many files");
-    if (expandedBytes > MAX_BINDER_ARCHIVE_BYTES) throw new Error("Binder ZIP expands beyond the 100 MB limit");
-    if (entry.name.startsWith("images/") && entry.originalSize > MAX_BINDER_IMAGE_BYTES) {
-      throw new Error(`Binder image exceeds the 10 MB limit: ${entry.name}`);
-    }
-    return entry.name === "binder.json" || entry.name.startsWith("images/");
-  } });
+  const entries = unzipBinderArchive(file.buffer);
   const archiveEntries = Object.entries(entries);
   const binderJson = entries["binder.json"];
   if (!binderJson) throw new Error("Binder ZIP does not contain binder.json");

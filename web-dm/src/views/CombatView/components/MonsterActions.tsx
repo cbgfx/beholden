@@ -2,7 +2,7 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { Input } from "@/ui/Input";
 import { theme, withAlpha } from "@/theme/theme";
-import type { MonsterDetail } from "@/views/CombatView/types";
+import type { MonsterDetail } from "@/domain/types/compendium";
 import type { AttackOverride } from "@/domain/types/domain";
 import { ActionRow } from "@/views/CombatView/components/ActionRow";
 import { MonsterSectionPanel } from "@beholden/shared/views/statblock/StatSheet";

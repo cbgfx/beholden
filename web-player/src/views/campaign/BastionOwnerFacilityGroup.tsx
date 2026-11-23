@@ -2,7 +2,7 @@ import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { C } from "@/lib/theme";
 import { Select } from "@/ui/Select";
 import type { BastionSpaceDefinition } from "@beholden/shared/domain/bastionFacilities";
-import type { Bastion, BastionFacility, CompendiumFacility } from "./BastionViewShared";
+import type { PlayerBastion as Bastion, BastionFacility, CompendiumFacility } from "@beholden/shared/api/bastions";
 import { accentButtonStyle } from "./BastionViewShared";
 import { FacilityRows } from "./BastionFacilityRows";
 

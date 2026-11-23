@@ -1,6 +1,6 @@
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { theme } from "@/theme/theme";
-import { conditionIconByKey } from "@/icons/conditions";
+import { conditionIconByKey } from "@beholden/shared/icons";
 import { conditionLabel } from "@/domain/conditions";
 
 export function PlayerConditions({

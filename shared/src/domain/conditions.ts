@@ -33,7 +33,7 @@ export function concentrationSaveDc(damage: number): number {
   return Math.max(10, Math.floor(damage / 2));
 }
 
-export const INCAPACITATING_CONDITION_KEYS = new Set([
+const INCAPACITATING_CONDITION_KEYS = new Set([
   "incapacitated",
   "paralyzed",
   "petrified",
@@ -93,7 +93,7 @@ export type RestType = "short" | "long";
  * a table convenience built on duration: an hour outlasts anything measured in rounds, and eight
  * hours outlasts nearly every poison, charm and blindness effect in print.
  */
-export const SHORT_REST_CLEARED_CONDITION_KEYS = new Set([
+const SHORT_REST_CLEARED_CONDITION_KEYS = new Set([
   "frightened",
   "grappled",
   "incapacitated",
@@ -118,7 +118,7 @@ export const SHORT_REST_CLEARED_CONDITION_KEYS = new Set([
  * through resolvePolymorphRevert in ./actors rather than dropping it here, or the actor keeps the
  * form's numbers.
  */
-export const LONG_REST_CLEARED_CONDITION_KEYS = new Set([
+const LONG_REST_CLEARED_CONDITION_KEYS = new Set([
   ...SHORT_REST_CLEARED_CONDITION_KEYS,
   "blinded",
   "charmed",

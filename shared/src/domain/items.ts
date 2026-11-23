@@ -61,17 +61,6 @@ const ITEM_PROPERTY_LABELS: Record<string, string> = {
   "2H": "Two-Handed",
 };
 
-export function uniqSorted(xs: string[]) {
-  return Array.from(new Set(xs.filter(Boolean))).sort((a, b) => a.localeCompare(b));
-}
-
-export function sortedRarities(xs: string[]) {
-  const set = new Set(xs.filter(Boolean));
-  const ordered = ITEM_RARITY_ORDER.filter((r) => set.has(r));
-  const extra = Array.from(set).filter((r) => !ITEM_RARITY_ORDER.includes(r as typeof ITEM_RARITY_ORDER[number])).sort();
-  return [...ordered, ...extra];
-}
-
 export function normalizeInventoryItemLookupName(name: string): string {
   return String(name ?? "")
     .replace(/\s+\[(?:2024|5\.5e)\]\s*$/i, "")

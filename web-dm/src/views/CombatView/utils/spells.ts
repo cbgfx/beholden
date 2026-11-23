@@ -1,4 +1,4 @@
-import type { MonsterDetail } from "@/views/CombatView/types";
+import type { MonsterDetail } from "@/domain/types/compendium";
 
 type NamedSpellEntry = { name?: unknown };
 

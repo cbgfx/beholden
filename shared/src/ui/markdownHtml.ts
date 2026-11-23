@@ -9,12 +9,35 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Returns the href if a note may link to it, otherwise null (the caller shows the label as text).
+ *
+ * Notes are written by players and DMs and read by each other, so this is an allowlist: in-app
+ * paths ("/binder/..."), in-page anchors, and http(s)/mailto. The old check was a denylist for
+ * /^\s*javascript:/, which a leading control character slipped past - browsers strip those before
+ * reading the scheme, so "\x01javascript:..." still ran as script. Parsing with URL applies the
+ * same stripping the browser does, so what we check is what the browser will act on.
+ */
+export function safeLinkHref(raw: string): string | null {
+  const href = raw.trim();
+  // A single leading slash is a path in this app. "//host" and "/\host" are not: browsers read both
+  // as a link to another site, so they go through the URL check below (which refuses them).
+  if (href.startsWith("/") && !/^\/[/\\]/.test(href)) return href;
+  if (href.startsWith("#")) return href;
+  try {
+    const { protocol } = new URL(href);
+    return protocol === "http:" || protocol === "https:" || protocol === "mailto:" ? href : null;
+  } catch {
+    return null;
+  }
+}
+
 function renderInlineMarkdown(value: string): string {
   return escapeHtml(value)
     .replace(
       /\[([^\]]+)\]\(([^)\s]+)\)/g,
       (_match, label: string, href: string) => {
-        if (/^\s*javascript:/i.test(href)) return label;
+        if (safeLinkHref(href) === null) return label;
         const mentionStyle = href.startsWith("/binder/")
           ? ' style="color:#7dd3fc;background:rgba(125,211,252,0.14);padding:1px 6px;border-radius:5px;font-weight:700;text-decoration:none;"'
           : "";

@@ -27,7 +27,10 @@ async function resizeToWebP(buffer: Buffer): Promise<Buffer> {
   // Portraits are stored on disk; caching operations between uploads adds RAM
   // without making subsequent reads of those saved portraits faster.
   sharp.cache(false);
-  return sharp(buffer, { animated: false })
+  // limitInputPixels: a small PNG can declare a huge canvas (a "decompression bomb"), and sharp's
+  // default ceiling (~268 megapixels) still lets one upload make it decode roughly a gigabyte.
+  // 50 megapixels covers any phone or camera photo, and everything ends up 360px wide anyway.
+  return sharp(buffer, { animated: false, limitInputPixels: 50_000_000 })
     // Phones save portrait photos as sideways pixels plus an EXIF "rotate me" flag. WebP output
     // drops that flag, so apply the rotation to the pixels first or the portrait ends up sideways.
     .autoOrient()

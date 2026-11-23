@@ -15,10 +15,6 @@ export {
   BEHOLDEN_COMPENDIUM_SCHEMA,
   type NativeCompendiumBatch,
   type NativeCompendiumBundle,
-  type NativeCompendiumDocument,
-  type NativeCompendiumImportResult,
-  type NativeCompendiumDocumentImportResult,
-  type NativeCompendiumPreview,
 } from "./nativeCompendiumShared.js";
 
 export {
@@ -33,7 +29,6 @@ export {
   resolveNativeContentHashes,
   resolveNativeCompendiumManifest,
   type NativeCompendiumManifestRequest,
-  type NativeCompendiumManifestResult,
 } from "./nativeCompendiumManifest.js";
 
 export {

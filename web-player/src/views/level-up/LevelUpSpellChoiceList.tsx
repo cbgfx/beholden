@@ -1,3 +1,4 @@
+import { useChoicePreview } from "@/views/character-progression/useChoicePreview";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
@@ -50,7 +51,7 @@ export function LevelUpSpellChoiceList({
   disabledNames?: string[];
 }) {
   const translateUi = useUiTranslation("playerUi");
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+
   const visibleSpells = React.useMemo(() => spells, [spells]);
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const disabledNameSet = React.useMemo(() => new Set((disabledNames ?? []).map(normalizeSpellName)), [disabledNames]);
@@ -76,20 +77,7 @@ export function LevelUpSpellChoiceList({
     });
   }, [visibleSpells]);
 
-  const activeSpell =
-    visibleSpells.find((spell) => spell.id === activeId)
-    ?? visibleSpells[0]
-    ?? null;
-
-  React.useEffect(() => {
-    if (!activeSpell) {
-      if (activeId !== null) setActiveId(null);
-      return;
-    }
-    if (activeId == null || !visibleSpells.some((spell) => spell.id === activeId)) {
-      setActiveId(activeSpell.id);
-    }
-  }, [activeId, activeSpell, visibleSpells]);
+  const { activeItem: activeSpell, setActiveId } = useChoicePreview(visibleSpells);
 
   return (
     <div>

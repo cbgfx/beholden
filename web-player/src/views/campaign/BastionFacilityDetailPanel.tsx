@@ -1,8 +1,8 @@
 import { C } from "@/lib/theme";
 import { Panel, SubsectionLabel } from "@beholden/shared/ui";
 import { facilitySizeName, isFacilityUpgraded, type BastionSpaceDefinition } from "@beholden/shared/domain/bastionFacilities";
-import type { Bastion, BastionFacility, CompendiumFacility } from "./BastionViewShared";
-import { orderListWithMaintain } from "./BastionViewShared";
+import type { PlayerBastion as Bastion, BastionFacility, CompendiumFacility } from "@beholden/shared/api/bastions";
+import { orderListWithMaintain } from "@beholden/shared/domain/bastionFacilities";
 import { useUiTranslation } from "@beholden/shared/i18n";
 
 export function BastionFacilityDetailPanel({

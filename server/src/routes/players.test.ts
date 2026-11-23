@@ -214,7 +214,7 @@ test("the party sees how hurt someone is, not their hit points", async () => {
   db.close();
 });
 
-test("players read the roster; only the DM changes it; outsiders see none of it", async () => {
+test("players read the party view; only the DM reads or changes the roster; outsiders see none of it", async () => {
   const db = seedDb();
   await withServer(db, async (call) => {
     const player = call(PLAYER);
@@ -222,6 +222,11 @@ test("players read the roster; only the DM changes it; outsiders see none of it"
     assert.equal((await player("POST", "/api/campaigns/camp-1/players", { characterName: "Me Again" })).status, 403);
     assert.equal((await player("PUT", "/api/players/p-linked", { hpCurrent: 38 })).status, 403);
     assert.equal((await player("DELETE", "/api/players/p-linked")).status, 403);
+    // The DM roster carries raw HP, death saves and every player's private notes with the DM.
+    // A player reads the party through /party instead, never through these.
+    assert.equal((await player("GET", "/api/campaigns/camp-1/players")).status, 403);
+    assert.equal((await player("GET", "/api/campaigns/camp-1/players/p-linked")).status, 403);
+    assert.equal((await call(DM)("GET", "/api/campaigns/camp-1/players")).status, 200);
 
     const outsider = call(OUTSIDER);
     assert.equal((await outsider("GET", "/api/campaigns/camp-1/players")).status, 403);

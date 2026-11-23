@@ -1,6 +1,6 @@
 import type { Db } from "../db.js";
 
-export const CANONICAL_PROGRESSION_VERSION = 3;
+const CANONICAL_PROGRESSION_VERSION = 3;
 
 /**
  * Removes the beta-era primary-class spell mirrors after schema v2 has placed

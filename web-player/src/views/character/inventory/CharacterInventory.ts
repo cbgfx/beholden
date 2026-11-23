@@ -6,7 +6,7 @@ import {
 import { formatItemDamageType, formatItemProperties, isCurrencyName, normalizeInventoryItemLookupName, itemModifierBonus } from "@beholden/shared/domain";
 import type { ParsedFeatureEffects } from "@/domain/character/featureEffects";
 import { abilityMod, normalizeWeaponProficiencyName, splitArmorProficiencyNames } from "@/views/character/CharacterSheetUtils";
-import { rollDiceExpr } from "@/lib/dice";
+import { rollDiceExpr } from "@beholden/shared/domain/dice";
 import {
   initializeItemUsesMaximum as sharedInitializeItemUsesMaximum,
   recoverItemCharges as sharedRecoverItemCharges,

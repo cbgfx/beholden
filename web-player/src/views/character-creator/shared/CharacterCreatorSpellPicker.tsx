@@ -1,3 +1,4 @@
+import { useChoicePreview } from "@/views/character-progression/useChoicePreview";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
@@ -30,7 +31,7 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
 }) {
   const translateUi = useUiTranslation("playerUi");
   const [q, setQ] = React.useState("");
-  const [activeId, setActiveId] = React.useState<string | null>(null);
+
   const trimmedSourceLabel = String(sourceLabel ?? "").trim();
   // Prerequisites are typed facts on ClassTalents — rendered from the record, never
   // regex-extracted from description prose. Talent dependencies resolve their display
@@ -74,20 +75,8 @@ export function SpellPicker<T extends { id: string; name: string; level: number 
     }
     return Array.from(buckets.values()).sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
   }, [filtered]);
-  const activeSpell =
-    filtered.find((spell) => spell.id === activeId)
-    ?? spells.find((spell) => spell.id === activeId)
-    ?? (filtered[0] ?? spells[0] ?? null);
+  const { activeItem: activeSpell, setActiveId } = useChoicePreview(spells, filtered);
 
-  React.useEffect(() => {
-    if (!activeSpell) {
-      if (activeId !== null) setActiveId(null);
-      return;
-    }
-    if (activeId == null || !spells.some((spell) => spell.id === activeId)) {
-      setActiveId(activeSpell.id);
-    }
-  }, [activeId, activeSpell, spells]);
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>

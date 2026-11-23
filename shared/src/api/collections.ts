@@ -1,9 +1,9 @@
-export interface NoteScopeDto {
+interface NoteScopeDto {
   campaignId: string;
   adventureId: string | null;
 }
 
-export interface NoteContentDto {
+interface NoteContentDto {
   /** What to show. For a note with no title of its own this is its first line of text. */
   title: string;
   text: string;
@@ -16,7 +16,7 @@ export interface NoteContentDto {
   titleIsDerived: boolean;
 }
 
-export interface NoteMetaDto {
+interface NoteMetaDto {
   sort: number;
   createdAt?: number;
   updatedAt?: number;
@@ -41,13 +41,13 @@ export interface FlatNoteDto {
   updatedAt?: number;
 }
 
-export interface TreasureScopeDto {
+interface TreasureScopeDto {
   campaignId: string;
   adventureId: string | null;
   encounterId: string | null;
 }
 
-export interface TreasureEntryDto {
+interface TreasureEntryDto {
   source: "compendium" | "custom";
   itemId: string | null;
   name: string;
@@ -60,7 +60,7 @@ export interface TreasureEntryDto {
   qty: number;
 }
 
-export interface TreasureMetaDto {
+interface TreasureMetaDto {
   sort: number;
   createdAt?: number;
   updatedAt?: number;
@@ -90,7 +90,7 @@ export interface FlatTreasureDto {
   updatedAt?: number;
 }
 
-export interface PartyInventoryItemContentDto {
+interface PartyInventoryItemContentDto {
   name: string;
   quantity: number;
   weight: number | null;
@@ -104,7 +104,7 @@ export interface PartyInventoryItemContentDto {
   payload?: Record<string, unknown> | null;
 }
 
-export interface PartyInventoryMetaDto {
+interface PartyInventoryMetaDto {
   revision?: string;
   sort: number;
   createdAt?: number;

@@ -4,7 +4,7 @@ import { theme, withAlpha } from "@/theme/theme";
 import { Button } from "@/ui/Button";
 import type { AddMonsterOptions } from "@/domain/types/domain";
 import type { CompendiumMonsterRow, AttackOverridesByMonsterId } from "@/views/CampaignView/monsterPicker/types";
-import { formatCr, parseLeadingNumberLoose } from "@/views/CampaignView/monsterPicker/utils";
+import { formatCr, parseLeadingNumberLoose } from "@beholden/shared/domain/monsters";
 import { QtyStepper } from "@/views/CampaignView/monsterPicker/components/QtyStepper";
 
 export function MonsterRow(props: {

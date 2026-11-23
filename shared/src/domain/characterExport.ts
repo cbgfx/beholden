@@ -6,7 +6,7 @@ export const CHARACTER_EXPORT_VERSION = 2 as const;
 const AbilityKeySchema = z.enum(["str", "dex", "con", "int", "wis", "cha"]);
 const AbilityScoreSchema = z.number().int().min(1).max(30).nullable();
 
-export const CharacterExportConditionSchema = z.object({
+const CharacterExportConditionSchema = z.object({
   key: z.string().trim().min(1).max(64),
   casterId: z.string().trim().min(1).max(160).nullable().optional(),
   hexAbility: AbilityKeySchema.optional(),
@@ -14,7 +14,7 @@ export const CharacterExportConditionSchema = z.object({
   expiresAtRound: z.number().int().min(1).max(100_000).nullable().optional(),
 }).passthrough();
 
-export const CharacterExportOverridesSchema = z.object({
+const CharacterExportOverridesSchema = z.object({
   tempHp: z.number().int(),
   acBonus: z.number().int(),
   hpMaxBonus: z.number().int(),
@@ -35,7 +35,7 @@ export const CharacterExportOverridesSchema = z.object({
 }).strict();
 
 /** Portable character state. Account, campaign, revision, timestamp, and image fields are excluded. */
-export const CharacterExportV2CharacterSchema = z.object({
+const CharacterExportV2CharacterSchema = z.object({
   name: z.string().trim().min(1),
   playerName: z.string().optional(),
   ruleset: z.enum(["5e", "5.5e"]),

@@ -1,14 +1,15 @@
+import { BinderFilterChips } from "@beholden/shared/ui/BinderFilterChips";
 import { useUiMessages, useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBinderMortals, fetchMortalOptions, type BinderMortal, type MortalOptions } from "@/services/binderMortalApi";
 import { Input } from "@/ui/Input";
 import { Button } from "@/ui/Button";
-import { theme, withAlpha } from "@/theme/theme";
+import { theme } from "@/theme/theme";
 import { BinderListEmpty, BinderListError, BinderListHeader, BinderListLoading, BinderRecordThumbnail, useBinderListSort } from "@/components/BinderListTable";
 import { SearchableMultiFilter } from "@/components/SearchableSelect";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
-import { BinderCompactCard } from "./BinderCompactCard";
+import { BinderCompactCard } from "@beholden/shared/ui/BinderCompactCard";
 
 const NONE = "__none__";
 type FilterKey = "className" | "race" | "status" | "campaign" | "player";
@@ -146,38 +147,11 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
       {Object.values(filters).some((values) => values.length) ? <Button variant="ghost" onClick={() => setFilters(emptyFilters())}>{translateUi("Clear")}</Button> : null}
       </div>
     </div>
-    {Object.entries(filters).some(([, values]) => values.length) ? <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-      {(Object.entries(filters) as Array<[FilterKey, string[]]>).flatMap(([key, values]) => values.map((value) => {
-        const choice = choices[key].find((item) => item.value === value);
-        return (
-          <button
-            key={`${key}:${value}`}
-            type="button"
-            onClick={() => setFilters((current) => ({ ...current, [key]: current[key].filter((item) => item !== value) }))}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "2px 7px",
-              border: `1px solid ${withAlpha(accent, 0.48)}`,
-              borderRadius: 999,
-              background: withAlpha(accent, 0.12),
-              color: theme.colors.text,
-              cursor: "pointer",
-              font: "inherit",
-              fontSize: "var(--fs-tiny)",
-              lineHeight: 1.35,
-              fontWeight: 900,
-            }}
-          >
-            <span style={{ color: accent }}>{labels[key]}</span> {choice?.label ?? value}
-            <span aria-hidden style={{ color: theme.colors.red, fontSize: 14 }}>
-              ×
-            </span>
-          </button>
-        );
-      }))}
-    </div> : null}
+    <BinderFilterChips filters={filters} accent={accent} theme={theme.colors}
+        label={(key) => labels[key]}
+        valueLabel={(key, value) => choices[key].find((item) => item.value === value)?.label ?? value}
+        removeLabel={(label, value) => translateUi("Remove {{value1}} {{value2}} filter", { value1: label, value2: value })}
+        onRemove={(key, value) => setFilters((current) => ({ ...current, [key]: current[key].filter((item) => item !== value) }))} />
     <div style={{ border: `1px solid ${theme.colors.panelBorder}`, borderRadius: theme.radius.panel, overflowX: "auto" }}>
       {!compact && <BinderListHeader
         columns={headers.map(({ label, key }) => ({ key, label, sortable: true }))}
@@ -191,7 +165,7 @@ export function BinderPlayersWorkspace({ binderId, binderCurrentDate, accent }: 
         : error ? <BinderListError message={error} />
         : sorted.length ? sorted.map(({ mortal, player, age }) => {
           const dead = mortal.lifeStatus === "dead";
-          if (compact) return <BinderCompactCard key={mortal.id} title={mortal.name} onOpen={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} icon={<BinderRecordThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />} badge={<span style={{ color: dead ? theme.colors.red : theme.colors.green }}>{dead ? translateUi("Dead") : translateUi("Alive")}</span>}>
+          if (compact) return <BinderCompactCard theme={theme.colors} key={mortal.id} title={mortal.name} onOpen={() => navigate(`/binder/${binderId}/mortals/${mortal.id}`)} icon={<BinderRecordThumbnail imageUrl={mortal.imageUrl} imageUpdatedAt={mortal.imageUpdatedAt} accent={accent} />} badge={<span style={{ color: dead ? theme.colors.red : theme.colors.green }}>{dead ? translateUi("Dead") : translateUi("Alive")}</span>}>
             {[player?.className, mortal.race?.name, age != null ? `${translateUi("Age")}: ${age}` : null].filter(Boolean).join(" · ")}
             <span style={{ display: "block" }}>{translateUi("Campaign")}: {player?.campaignNames.join(", ") || translateUi("None")}</span>
             <span style={{ display: "block" }}>{translateUi("Player")}: {player?.playerName || translateUi("None")}</span>

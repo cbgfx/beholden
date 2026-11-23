@@ -61,7 +61,7 @@ const SAME_ORIGIN_IS_DIRECT_PORT = (() => {
 })();
 
 /** An `Error` from a non-OK API response, carrying the HTTP status and any `code` from the body. */
-export interface ApiError extends Error {
+interface ApiError extends Error {
   status?: number;
   code?: string;
 }
@@ -113,18 +113,15 @@ async function apiError(res: Response): Promise<ApiError> {
   return finish(new Error(`${res.status} ${res.statusText}`));
 }
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem("beholden_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
+// Every request rides on the HttpOnly session cookie (credentials: "include"). Writes add the CSRF
+// proof the server handed out at sign-in; there is no Authorization header any more.
 function mergeInit(init?: RequestInit): RequestInit {
   const method = (init?.method ?? "GET").toUpperCase();
   const csrf = !["GET", "HEAD", "OPTIONS"].includes(method) ? localStorage.getItem(CSRF_STORAGE_KEY) : null;
   return {
     ...init,
     credentials: "include",
-    headers: { ...getAuthHeaders(), ...(csrf ? { "X-Beholden-CSRF": csrf } : {}), ...(init?.headers ?? {}) },
+    headers: { ...(csrf ? { "X-Beholden-CSRF": csrf } : {}), ...(init?.headers ?? {}) },
   };
 }
 

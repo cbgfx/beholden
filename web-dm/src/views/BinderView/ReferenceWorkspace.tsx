@@ -2,7 +2,7 @@ import { ReferencedMarkdown as MarkdownRichText } from "@beholden/shared/ui/Refe
 import { LocationMap } from "@beholden/shared/ui/LocationMap";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import { useIsNarrow } from "@beholden/shared/ui/useIsNarrow";
-import { BinderCompactCard } from "./BinderCompactCard";
+import { BinderCompactCard } from "@beholden/shared/ui/BinderCompactCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "@/services/api";
@@ -673,7 +673,7 @@ export function ReferenceWorkspace(props: {
           ) : sortedRecords.length ? (
             sortedRecords.map((record) => {
               const hovered = hoveredId === record.id;
-              if (compact) return <BinderCompactCard key={record.id} title={record.name}
+              if (compact) return <BinderCompactCard theme={theme.colors} key={record.id} title={record.name}
                 onOpen={() => navigate(`/binder/${props.binderId}/${props.type}/${record.id}`)}
                 icon={isDeities ? <BinderRecordThumbnail imageUrl={record.imageUrl} imageUpdatedAt={record.imageUpdatedAt} accent={props.accent} /> : showIcon ? <EntityIcon icon={record.icon ?? getDefaultEntityIcon(props.type)} size={22} /> : undefined}
                 badge={isDeities ? record.rank ?? translateUi("None") : `${translateUi(labels.usage)}: ${record.usageCount}`}>

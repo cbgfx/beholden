@@ -1,12 +1,10 @@
+import { ItemChoicePreview } from "@/views/character-progression/ItemChoicePreview";
+import { useItemChoiceDetails } from "@/views/character-progression/useItemChoiceDetails";
+import { useChoicePreview } from "@/views/character-progression/useChoicePreview";
 import { useUiTranslation } from "@beholden/shared/i18n/useUiTranslation";
 import React from "react";
 import { C, withAlpha } from "@/lib/theme";
-import { api } from "@/services/api";
 import { inputStyle, labelStyle } from "./CharacterCreatorStyles";
-
-type ItemDetailPreview = {
-  text?: string[] | string | null;
-};
 
 export function ItemPicker<T extends { id: string; name: string; rarity?: string | null; type?: string | null; magic?: boolean; attunement?: boolean }>({
   title,
@@ -29,50 +27,14 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
 }) {
   const translateUi = useUiTranslation("playerUi");
   const [q, setQ] = React.useState("");
-  const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [details, setDetails] = React.useState<Record<string, ItemDetailPreview>>({});
+
   const trimmedSourceLabel = String(sourceLabel ?? "").trim();
   const disabledIdSet = React.useMemo(() => new Set(disabledIds ?? []), [disabledIds]);
   const filtered = q
     ? items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase()))
     : items;
-  const activeItem =
-    filtered.find((item) => item.id === activeId)
-    ?? items.find((item) => item.id === activeId)
-    ?? (filtered[0] ?? items[0] ?? null);
-
-  React.useEffect(() => {
-    if (!activeItem) {
-      if (activeId !== null) setActiveId(null);
-      return;
-    }
-    if (activeId == null || !items.some((item) => item.id === activeId)) {
-      setActiveId(activeItem.id);
-    }
-  }, [activeId, activeItem, items]);
-
-  React.useEffect(() => {
-    const ids = filtered
-      .map((item) => item.id)
-      .filter((id) => !details[id])
-      .slice(0, 48);
-    if (ids.length === 0) return;
-    let alive = true;
-    api<{ rows: Array<{ id: string; text?: string[] | null }> }>("/api/compendium/items/lookup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids, includeText: true }),
-    })
-      .then((result) => {
-        if (!alive) return;
-        const patch: Record<string, ItemDetailPreview> = {};
-        for (const row of result.rows ?? []) patch[row.id] = { text: row.text ?? null };
-        if (Object.keys(patch).length === 0) return;
-        setDetails((prev) => ({ ...prev, ...patch }));
-      })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, [details, filtered]);
+  const { activeItem, setActiveId } = useChoicePreview(items, filtered);
+  const details = useItemChoiceDetails(filtered);
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -137,37 +99,7 @@ export function ItemPicker<T extends { id: string; name: string; rarity?: string
             })}
           </div>
           {activeItem && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "12px 14px",
-                borderRadius: 10,
-                border: `1px solid ${C.panelBorder}`,
-                background: C.panelBg,
-              }}
-            >
-              <div style={{ fontWeight: 800, fontSize: "var(--fs-subtitle)", color: C.accentHl }}>
-                {activeItem.name}
-              </div>
-              <div style={{ marginTop: 6, fontSize: "var(--fs-small)", color: C.muted }}>
-                {[activeItem.rarity, activeItem.type, activeItem.attunement ? "Attunement" : null].filter(Boolean).join(" • ")}
-              </div>
-              {details[activeItem.id] && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: "var(--fs-small)",
-                    lineHeight: 1.55,
-                    color: "rgba(191,227,255,0.82)",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {Array.isArray(details[activeItem.id].text)
-                    ? (details[activeItem.id].text as string[]).join("\n\n").trim()
-                    : String(details[activeItem.id].text ?? "").trim()}
-                </div>
-              )}
-            </div>
+            <ItemChoicePreview item={activeItem} detail={details[activeItem.id]} />
           )}
         </>
       )}

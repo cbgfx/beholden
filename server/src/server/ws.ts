@@ -28,14 +28,22 @@ export function createWsServer(opts: {
   path?: string;
   onConnectionHello?: (ws: WebSocket) => void;
   authorize?: (req: import('http').IncomingMessage) => WsAuthResult;
+  /**
+   * Checked during the upgrade handshake, before any session lookup. Browsers attach the session
+   * cookie to a WebSocket opened by another same-site page (different port or subdomain), so
+   * without this such a page could listen to the user's live campaign events.
+   */
+  allowOrigin?: (req: import('http').IncomingMessage) => boolean;
 }) {
-  const { httpServer, path = "/ws", onConnectionHello, authorize } = opts;
+  const { httpServer, path = "/ws", onConnectionHello, authorize, allowOrigin } = opts;
   const wsCompressionRaw = String(process.env.BEHOLDEN_WS_COMPRESSION ?? "true").trim().toLowerCase();
   const wsCompressionEnabled =
     wsCompressionRaw === "1" || wsCompressionRaw === "true" || wsCompressionRaw === "yes";
   const wss = new WebSocketServer({
     server: httpServer,
     path,
+    // Rejecting here answers the handshake with 403, so the socket is never opened.
+    ...(allowOrigin ? { verifyClient: (info: { req: import('http').IncomingMessage }) => allowOrigin(info.req) } : {}),
     perMessageDeflate: wsCompressionEnabled
       ? {
           // Avoid compressing tiny frames where compression overhead outweighs gains.

@@ -3,7 +3,7 @@ import { Button } from "@/ui/Button";
 import { theme, withAlpha } from "@/theme/theme";
 import type { DrawerContent } from "@/drawers/types";
 import { CONDITION_DEFS } from "@/domain/conditions";
-import { conditionIconByKey } from "@/icons/conditions";
+import { conditionIconByKey } from "@beholden/shared/icons";
 import { Select } from "@/ui/Select";
 import type { SharedAbilityKey } from "@beholden/shared/domain";
 import {

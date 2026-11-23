@@ -2,8 +2,9 @@ import { useCommittedText } from "@beholden/shared/ui";
 import { facilitySizeName, isFacilityUpgraded, type BastionSpaceDefinition } from "@beholden/shared/domain/bastionFacilities";
 import { C } from "@/lib/theme";
 import { Select } from "@/ui/Select";
-import type { BastionFacility, CompendiumFacility } from "./BastionViewShared";
-import { ghostButtonStyle, inputStyle, normalizeOrder, orderListWithMaintain } from "./BastionViewShared";
+import type { BastionFacility, CompendiumFacility } from "@beholden/shared/api/bastions";
+import { ghostButtonStyle, inputStyle } from "./BastionViewShared";
+import { normalizeOrder, orderListWithMaintain } from "@beholden/shared/domain/bastionFacilities";
 import { useUiTranslation } from "@beholden/shared/i18n";
 
 /** A facility's notes, saved when typing pauses or the field loses focus rather than per keystroke. */
